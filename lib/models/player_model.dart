@@ -1,6 +1,6 @@
 class PlayerModel {
   final String id;
-  final String name;
+  String name; // 👈 Mutable field for live profile name changes
   final String email;
   final Map<String, int> tournamentScores;
   final Map<String, Map<String, int>> gameStats;
@@ -18,11 +18,14 @@ class PlayerModel {
     this.activeDeviceSignature,
   }) : this.gameStats = gameStats ?? {};
 
-  // Clone constructor to support hardware mutations safely inside providers
-  PlayerModel copyWith({String? activeDeviceSignature}) {
+  // Clone constructor to support hardware & profile mutations safely inside providers
+  PlayerModel copyWith({
+    String? name,
+    String? activeDeviceSignature,
+  }) {
     return PlayerModel(
       id: this.id,
-      name: this.name,
+      name: name ?? this.name,
       email: this.email,
       tournamentScores: this.tournamentScores,
       gameStats: this.gameStats,
