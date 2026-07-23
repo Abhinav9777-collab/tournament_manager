@@ -21,7 +21,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _addPlayerNameCtrl = TextEditingController();
   final _addPlayerEmailCtrl = TextEditingController();
   
-  // Clean Single Controllers for Team Names
   final _teamANameController = TextEditingController();
   final _teamBNameController = TextEditingController();
 
@@ -76,10 +75,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isMobile = screenWidth < 768;
     bool isTablet = screenWidth >= 768 && screenWidth < 1150;
 
+    bool isLight = provider.appThemeMode == ThemeMode.light;
+    Color bgColor = isLight ? const Color(0xFFF8FAFC) : const Color(0xFF020308);
+
     return Scaffold(
-      backgroundColor: provider.appThemeMode == ThemeMode.light ? const Color(0xFFF1F5F9) : const Color(0xFF020308),
+      backgroundColor: bgColor,
       appBar: isMobile ? AppBar(
-        backgroundColor: provider.appThemeMode == ThemeMode.light ? const Color(0xFF1E293B) : const Color(0xFF060813),
+        backgroundColor: isLight ? const Color(0xFF1E293B) : const Color(0xFF060813),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('TOURNAMENT MANAGER', style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
@@ -87,7 +89,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       drawer: isMobile ? Drawer(
         child: Container(
           color: const Color(0xFF060813),
-          child: _buildSidebarContentTree(provider, currentUser),
+          child: _buildSidebarContentTree(provider, currentUser, isLight),
         ),
       ) : null,
       body: Row(
@@ -99,17 +101,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: Color(0xFF060813),
                 border: Border(right: BorderSide(color: Color(0xFF16192E), width: 1)),
               ),
-              child: _buildSidebarContentTree(provider, currentUser),
+              child: _buildSidebarContentTree(provider, currentUser, isLight),
             ),
 
           Expanded(
             child: Column(
               children: [
-                _buildTopRibbonHeaderView(currentUser, provider),
+                _buildTopRibbonHeaderView(currentUser, provider, isLight),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 150),
-                    child: _buildConditionalContentRouteBody(provider, currentUser.id),
+                    child: _buildConditionalContentRouteBody(provider, currentUser.id, isLight),
                   ),
                 ),
               ],
@@ -120,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSidebarContentTree(TournamentProvider provider, PlayerModel currentUser) {
+  Widget _buildSidebarContentTree(TournamentProvider provider, PlayerModel currentUser, bool isLight) {
     return Column(
       children: [
         const SizedBox(height: 35),
@@ -150,7 +152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6C5CE7), minimumSize: const Size(double.infinity, 44)),
             onPressed: () {
               if (Navigator.canPop(context)) Navigator.pop(context); 
-              _showLaunchNewTournamentDialog(context, provider);
+              _showLaunchNewTournamentDialog(context, provider, isLight);
             },
             child: const Text("+ Create Tournament", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
           ),
@@ -160,58 +162,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildConditionalContentRouteBody(TournamentProvider provider, String loggedInUserId) {
+  Widget _buildConditionalContentRouteBody(TournamentProvider provider, String loggedInUserId, bool isLight) {
     switch (_activeSidebarTab) {
-      case 'Dashboard': return _buildCleanCoreDashboardView(provider, loggedInUserId);
-      case 'Games Library': return _buildGamesLibraryTabView();
-      case 'Players List': return _buildPlayersRegistryTabView(provider);
-      case 'My Tournaments': return _buildTournamentsActiveHubView(provider);
-      case 'Scores & Positions': return _buildLeaderboardsFunctionalView(provider);
-      case 'Certificates': return _buildRewardsCertificatesTabView(provider);
-      case 'Settings': return _buildSettingsTabView(provider);
-      default: return _buildCleanCoreDashboardView(provider, loggedInUserId);
+      case 'Dashboard': return _buildCleanCoreDashboardView(provider, loggedInUserId, isLight);
+      case 'Games Library': return _buildGamesLibraryTabView(isLight);
+      case 'Players List': return _buildPlayersRegistryTabView(provider, isLight);
+      case 'My Tournaments': return _buildTournamentsActiveHubView(provider, isLight);
+      case 'Scores & Positions': return _buildLeaderboardsFunctionalView(provider, isLight);
+      case 'Certificates': return _buildRewardsCertificatesTabView(provider, isLight);
+      case 'Settings': return _buildSettingsTabView(provider, isLight);
+      default: return _buildCleanCoreDashboardView(provider, loggedInUserId, isLight);
     }
   }
 
-  Widget _buildCleanCoreDashboardView(TournamentProvider provider, String loggedInUserId) {
+  Widget _buildCleanCoreDashboardView(TournamentProvider provider, String loggedInUserId, bool isLight) {
     return SingleChildScrollView(
       key: const ValueKey('MainDashboardView'),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMetricsCounterRibbon(provider),
+          _buildMetricsCounterRibbon(provider, isLight),
           const SizedBox(height: 24),
-          _buildLiveMatchOverviewCard(provider),
+          _buildLiveMatchOverviewCard(provider, isLight),
           const SizedBox(height: 24),
-          _buildAnalyticsGraphsIntegrationCard(provider),
+          _buildAnalyticsGraphsIntegrationCard(provider, isLight),
           const SizedBox(height: 24),
-          _buildPodiumVisualizer3DCard(provider),
+          _buildPodiumVisualizer3DCard(provider, isLight),
         ],
       ),
     );
   }
  
-  Widget _buildGamesLibraryTabView() {
+  Widget _buildGamesLibraryTabView(bool isLight) {
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color borderColor = isLight ? Colors.black12 : Colors.white10;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: _gameFormatsDatabase.keys.map((category) {
         return Container(
           margin: const EdgeInsets.only(bottom: 20),
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: const Color(0xFF090B16), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)),
+          decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(category.toUpperCase(), style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(category.toUpperCase(), style: const TextStyle(color: Color(0xFF00B4D8), fontWeight: FontWeight.bold, fontSize: 13)),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 10, runSpacing: 10,
                 children: _gameFormatsDatabase[category]!.map((subFormat) {
                   return Chip(
-                    backgroundColor: const Color(0xFF14182E),
-                    side: const BorderSide(color: Colors.white10),
-                    label: Text(subFormat, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                    backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E),
+                    side: BorderSide(color: borderColor),
+                    label: Text(subFormat, style: TextStyle(color: isLight ? const Color(0xFF1E293B) : Colors.white70, fontSize: 11)),
                   );
                 }).toList(),
               )
@@ -222,10 +227,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildPlayersRegistryTabView(TournamentProvider provider) {
+  Widget _buildPlayersRegistryTabView(TournamentProvider provider, bool isLight) {
     if (provider.activeGameRoomId == null) {
-      return const Center(child: Text("Please create or select a tournament first.", style: TextStyle(color: Colors.white38)));
+      return Center(child: Text("Please create or select a tournament first.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
     }
+
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -236,11 +243,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text("Players in ${provider.activeGameRoom?.gameName}", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text("Players in ${provider.activeGameRoom?.gameName}", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
-                onPressed: () => _showAddPlayerActionModal(context, provider),
+                onPressed: () => _showAddPlayerActionModal(context, provider, isLight),
                 icon: const Icon(Icons.person_add_alt_1_rounded, size: 14, color: Colors.white),
                 label: const Text("Add Player", style: TextStyle(fontSize: 10, color: Colors.white)),
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A085), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
@@ -248,7 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _buildLiveSearchBoxPanel(),
+          _buildLiveSearchBoxPanel(isLight),
           const SizedBox(height: 20),
           Expanded(
             child: StreamBuilder<List<PlayerModel>>(
@@ -258,7 +265,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final filtered = _searchQuery.isEmpty ? list : list.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
                 
                 if (filtered.isEmpty) {
-                  return const Center(child: Text("No players added yet. Click 'Add Player' to register.", style: TextStyle(color: Colors.white38, fontSize: 12)));
+                  return Center(child: Text("No players added yet. Click 'Add Player' to register.", style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 12)));
                 }
 
                 return ListView.builder(
@@ -268,12 +275,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     String r = provider.getPlayerRole(p.id);
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const CircleAvatar(backgroundColor: Color(0xFF14182E), child: Icon(Icons.person, size: 14, color: Colors.cyanAccent)),
-                      title: Text(p.name, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                      subtitle: Text("Role: $r", style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                      leading: CircleAvatar(backgroundColor: isLight ? const Color(0xFFCBD5E1) : const Color(0xFF14182E), child: Icon(Icons.person, size: 14, color: isLight ? const Color(0xFF0F172A) : Colors.cyanAccent)),
+                      title: Text(p.name, style: TextStyle(color: mainText, fontSize: 13, fontWeight: FontWeight.bold)),
+                      subtitle: Text("Role: $r", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 11)),
                       trailing: provider.isMasterEditMode ? IconButton(
                         icon: const Icon(Icons.edit, color: Colors.amber, size: 18),
-                        onPressed: () => _showMasterEditPlayerModal(context, provider, provider.activeGameRoomId!, p),
+                        onPressed: () => _showMasterEditPlayerModal(context, provider, provider.activeGameRoomId!, p, isLight),
                       ) : null,
                     );
                   },
@@ -286,18 +293,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // 🏆 ACTIVE TOURNAMENTS VIEW WITH DELETE & SELECT CONTROLS
-  Widget _buildTournamentsActiveHubView(TournamentProvider provider) {
+  Widget _buildTournamentsActiveHubView(TournamentProvider provider, bool isLight) {
     if (provider.allGameRooms.isEmpty) {
-      return const Center(child: Text("No tournaments created yet. Click '+ Create Tournament' to start.", style: TextStyle(color: Colors.white38)));
+      return Center(child: Text("No tournaments created yet. Click '+ Create Tournament' to start.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
     }
+
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mountedCardBg = isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
 
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Tournament List", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text("Tournament List", style: TextStyle(color: mainText, fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
           Expanded(
             child: ListView.builder(
@@ -306,32 +316,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final t = provider.allGameRooms[idx];
                 final bool isMounted = provider.activeGameRoomId == t.id;
                 return Card(
-                  color: isMounted ? const Color(0xFF14182E) : const Color(0xFF090B16),
+                  color: isMounted ? mountedCardBg : cardBg,
                   margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(side: BorderSide(color: isMounted ? Colors.cyanAccent : Colors.transparent)),
+                  shape: RoundedRectangleBorder(side: BorderSide(color: isMounted ? Colors.cyanAccent : (isLight ? Colors.black12 : Colors.transparent))),
                   child: ListTile(
                     leading: const Icon(Icons.hub, color: Colors.purpleAccent),
-                    title: Text(t.gameName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    subtitle: Text("Game: ${t.gameType} • Round: ${t.currentRound}/${t.maxRounds} • Status: ${t.liveStatus}", style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                    title: Text(t.gameName, style: TextStyle(color: mainText, fontWeight: FontWeight.bold)),
+                    subtitle: Text("Game: ${t.gameType} • Round: ${t.currentRound}/${t.maxRounds} • Status: ${t.liveStatus}", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 11)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (provider.isMasterEditMode)
                           IconButton(
                             icon: const Icon(Icons.settings, color: Colors.amber, size: 20),
-                            onPressed: () => _showMasterEditTournamentModal(context, provider, t),
+                            onPressed: () => _showMasterEditTournamentModal(context, provider, t, isLight),
                           ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(backgroundColor: isMounted ? Colors.green : const Color(0xFF6C5CE7)),
                           onPressed: () => provider.selectGameRoom(t.id), 
-                          child: Text(isMounted ? "Selected ✓" : "Select", style: const TextStyle(fontSize: 11))
+                          child: Text(isMounted ? "Selected ✓" : "Select", style: const TextStyle(fontSize: 11, color: Colors.white))
                         ),
                         const SizedBox(width: 8),
-                        
-                        // 🗑️ DELETE TOURNAMENT BUTTON
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                          onPressed: () => _confirmDeleteTournamentDialog(context, provider, t.id, t.gameName),
+                          onPressed: () => _confirmDeleteTournamentDialog(context, provider, t.id, t.gameName, isLight),
                         )
                       ],
                     ),
@@ -345,18 +353,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildLeaderboardsFunctionalView(TournamentProvider provider) {
+  Widget _buildLeaderboardsFunctionalView(TournamentProvider provider, bool isLight) {
     if (provider.activeGameRoomId == null) {
-      return const Center(child: Text("No tournament selected. Choose one from 'My Tournaments' tab.", style: TextStyle(color: Colors.white38)));
+      return Center(child: Text("No tournament selected. Choose one from 'My Tournaments' tab.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
     }
     return Container(
       padding: const EdgeInsets.all(12),
-      color: const Color(0xFF020308),
-      child: _buildAdaptiveMultiGameGrid(provider, provider.currentlyLoggedInUser!.id),
+      child: _buildAdaptiveMultiGameGrid(provider, provider.currentlyLoggedInUser!.id, isLight),
     );
   }
 
-  Widget _buildAdaptiveMultiGameGrid(TournamentProvider provider, String loggedInUserId) {
+  Widget _buildAdaptiveMultiGameGrid(TournamentProvider provider, String loggedInUserId, bool isLight) {
     final room = provider.activeGameRoom;
     final String targetGame = room?.gameType ?? 'Cricket';
     final String currentId = provider.activeGameRoomId!;
@@ -365,11 +372,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     int currentCompletedRound = room?.currentRound ?? 1;
     int roundsLeft = math.max(0, totalConfiguredRounds - currentCompletedRound + 1);
 
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+    Color rowBg = isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0D0F21);
+
     return StreamBuilder<List<PlayerModel>>(
       stream: provider.streamPlayers(),
       builder: (context, snap) {
         final allPlayers = snap.data ?? [];
-        if (allPlayers.isEmpty) return const Center(child: Text("No players added to this tournament yet.", style: TextStyle(color: Colors.white38)));
+        if (allPlayers.isEmpty) return Center(child: Text("No players added to this tournament yet.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
         List<PlayerModel> filtered = _searchQuery.isEmpty ? allPlayers : allPlayers.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
 
         bool isRankLockActive = allPlayers.any((p) => (p.gameStats[currentId]?['position'] ?? 0) == 0);
@@ -381,9 +392,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF090B16),
+                color: cardBg,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+                border: Border.all(color: isLight ? Colors.black12 : Colors.cyanAccent.withOpacity(0.3)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -391,14 +402,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Active Game: ${room?.gameName}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                      Text("Current Round: $currentCompletedRound / $totalConfiguredRounds", style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                      Text("Active Game: ${room?.gameName}", style: TextStyle(color: mainText, fontWeight: FontWeight.bold, fontSize: 12)),
+                      Text("Current Round: $currentCompletedRound / $totalConfiguredRounds", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54, fontSize: 10)),
                     ],
                   ),
                   
                   Row(
                     children: [
-                      // 🔄 RESET TOURNAMENT BUTTON
                       OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.amber),
@@ -406,7 +416,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         icon: const Icon(Icons.restart_alt_rounded, color: Colors.amber, size: 14),
                         label: const Text("Reset Game", style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
-                        onPressed: () => _confirmResetTournamentDialog(context, provider, currentId, room?.gameName ?? "Game"),
+                        onPressed: () => _confirmResetTournamentDialog(context, provider, currentId, room?.gameName ?? "Game", isLight),
                       ),
                       const SizedBox(width: 8),
 
@@ -431,7 +441,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: Text(
                           room?.liveStatus == 'COMPLETED' ? "Match Finished 🏁" : "Rounds Left: $roundsLeft",
-                          style: TextStyle(color: roundsLeft > 0 ? Colors.cyanAccent : Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: roundsLeft > 0 ? (isLight ? const Color(0xFF0284C7) : Colors.cyanAccent) : Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -465,18 +475,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return Container(
                     margin: const EdgeInsets.only(bottom: 10),
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: const Color(0xFF0D0F21), borderRadius: BorderRadius.circular(12)),
+                    decoration: BoxDecoration(color: rowBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: isLight ? Colors.black12 : Colors.transparent)),
                     child: Row(
                       children: [
-                        Text("#$globalRankPosition", style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+                        Text("#$globalRankPosition", style: const TextStyle(color: Color(0xFF00B4D8), fontWeight: FontWeight.bold)),
                         const SizedBox(width: 12),
                         
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(p.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                              Text("Role: $userRole", style: const TextStyle(color: Colors.white38, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(p.name, style: TextStyle(color: mainText, fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text("Role: $userRole", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
                             ],
                           ),
                         ),
@@ -485,15 +495,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (userRole != 'Bowler Only') Text("R: ${stats['runs'] ?? 0}", style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                              if (userRole != 'Bowler Only') Text("R: ${stats['runs'] ?? 0}", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 11)),
                               if (userRole != 'Bowler Only' && userRole != 'Batsman Only') const SizedBox(width: 6),
-                              if (userRole != 'Batsman Only') Text("W: ${stats['wickets'] ?? 0}", style: const TextStyle(color: Colors.white70, fontSize: 11)),
+                              if (userRole != 'Batsman Only') Text("W: ${stats['wickets'] ?? 0}", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 11)),
                             ],
                           ),
                           IconButton(
-                            icon: Icon(Icons.edit_note_rounded, color: (roundsLeft > 0 || provider.isMasterEditMode) ? Colors.cyanAccent : Colors.grey, size: 20),
+                            icon: Icon(Icons.edit_note_rounded, color: (roundsLeft > 0 || provider.isMasterEditMode) ? const Color(0xFF00B4D8) : Colors.grey, size: 20),
                             onPressed: (roundsLeft > 0 || provider.isMasterEditMode) ? () {
-                              _showModernPerformanceEntryDialog(context, provider, currentId, p.id, userRole);
+                              _showModernPerformanceEntryDialog(context, provider, currentId, p.id, userRole, isLight);
                             } : () {
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Tournament Rounds Completed! Turn on Master Edit Mode in Settings to override."), backgroundColor: Colors.orange));
                             },
@@ -502,13 +512,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         else ...[
                           DropdownButton<int>(
                             value: (stats['position'] ?? 0) == 0 ? null : stats['position'],
-                            hint: const Text("Assign Rank", style: TextStyle(color: Colors.cyanAccent, fontSize: 11)),
-                            dropdownColor: const Color(0xFF090B16),
+                            hint: const Text("Assign Rank", style: TextStyle(color: Color(0xFF00B4D8), fontSize: 11)),
+                            dropdownColor: cardBg,
                             underline: const SizedBox(),
                             items: dynamicRankItems.map((int val) {
                               return DropdownMenuItem<int>(
                                 value: val, 
-                                child: Text("Rank $val", style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))
+                                child: Text("Rank $val", style: TextStyle(color: mainText, fontSize: 11, fontWeight: FontWeight.bold))
                               );
                             }).toList(),
                             onChanged: (roundsLeft > 0 || provider.isMasterEditMode) ? (selectedRank) {
@@ -522,7 +532,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         if (provider.isMasterEditMode)
                           IconButton(
                             icon: const Icon(Icons.mode_edit_outline_rounded, color: Colors.amber, size: 18),
-                            onPressed: () => _showMasterEditPlayerModal(context, provider, currentId, p),
+                            onPressed: () => _showMasterEditPlayerModal(context, provider, currentId, p, isLight),
                           ),
 
                         const SizedBox(width: 8),
@@ -539,31 +549,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showModernPerformanceEntryDialog(BuildContext context, TournamentProvider provider, String roomId, String playerId, String role) {
+  void _showModernPerformanceEntryDialog(BuildContext context, TournamentProvider provider, String roomId, String playerId, String role, bool isLight) {
     _runsInputCtrl.clear();
     _wicketsInputCtrl.clear();
+
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF090B16),
-        title: Text("Edit Performance ($role)", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        backgroundColor: cardBg,
+        title: Text("Edit Performance ($role)", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (role != 'Bowler Only')
               TextField(
                 controller: _runsInputCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: mainText),
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Runs Scored", labelStyle: TextStyle(color: Colors.white54)),
+                decoration: InputDecoration(labelText: "Runs Scored", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54)),
               ),
             if (role != 'Batsman Only')
               TextField(
                 controller: _wicketsInputCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(color: mainText),
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: "Wickets Taken", labelStyle: TextStyle(color: Colors.white54)),
+                decoration: InputDecoration(labelText: "Wickets Taken", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54)),
               ),
           ],
         ),
@@ -582,14 +595,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildRewardsCertificatesTabView(TournamentProvider provider) {
+  Widget _buildRewardsCertificatesTabView(TournamentProvider provider, bool isLight) {
     if (provider.activeGameRoomId == null) {
-      return const Center(child: Text("Please select a tournament first.", style: TextStyle(color: Colors.white38)));
+      return Center(child: Text("Please select a tournament first.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
     }
 
     final allPlayers = provider.sortedPlayers;
     if (allPlayers.isEmpty) {
-      return const Center(child: Text("Please add players to this tournament first to calculate the top rank.", style: TextStyle(color: Colors.white38)));
+      return Center(child: Text("Please add players to this tournament first to calculate the top rank.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
     }
 
     final PlayerModel winnerPlayer = allPlayers.first; 
@@ -605,7 +618,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.all(12),
               width: double.infinity,
               decoration: BoxDecoration(color: Colors.greenAccent.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
-              child: Text("🏆 WINNER UNLOCKED: Certificate generated for Current Rank #1: ${winnerPlayer.name.toUpperCase()}", style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              child: Text("🏆 WINNER UNLOCKED: Certificate generated for Current Rank #1: ${winnerPlayer.name.toUpperCase()}", style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
             ),
             
             Container(
@@ -784,19 +797,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSettingsTabView(TournamentProvider provider) {
+  Widget _buildSettingsTabView(TournamentProvider provider, bool isLight) {
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text("⚙️ SETTINGS & APP CONTROLS", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        Text("⚙️ SETTINGS & APP CONTROLS", style: TextStyle(color: mainText, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
         const SizedBox(height: 24),
 
         _buildSettingsGroupSection("System Overrides & Admin Tools", [
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.flash_on_rounded, color: Colors.amber, size: 18),
-            title: const Text("Master Edit Mode (God Mode)", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-            subtitle: const Text("Allows direct editing of player names, scores, and rounds at any time", style: TextStyle(color: Colors.white38, fontSize: 10)),
+            title: Text("Master Edit Mode (God Mode)", style: TextStyle(color: mainText, fontSize: 13, fontWeight: FontWeight.bold)),
+            subtitle: Text("Allows direct editing of player names, scores, and rounds at any time", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 10)),
             trailing: Switch(
               value: provider.isMasterEditMode,
               activeColor: Colors.cyanAccent,
@@ -814,8 +829,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.color_lens_rounded, color: Colors.purpleAccent, size: 18),
-            title: const Text("Dark Theme Mode", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-            subtitle: const Text("Toggle between Dark and Light mode themes", style: TextStyle(color: Colors.white38, fontSize: 10)),
+            title: Text("Dark Theme Mode", style: TextStyle(color: mainText, fontSize: 13, fontWeight: FontWeight.bold)),
+            subtitle: Text("Toggle between Dark and Light mode themes", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 10)),
             trailing: Switch(
               value: provider.appThemeMode == ThemeMode.dark,
               activeColor: Colors.purpleAccent,
@@ -824,45 +839,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
           ),
-        ]),
+        ], isLight),
 
         _buildSettingsGroupSection("Profile Settings", [
           InkWell(
-            onTap: () => _showChangeNameDialog(provider),
-            child: _buildSettingsRowItem("Change Name", Icons.badge, trailingText: provider.currentlyLoggedInUser?.name),
+            onTap: () => _showChangeNameDialog(provider, isLight),
+            child: _buildSettingsRowItem("Change Name", Icons.badge, isLight, trailingText: provider.currentlyLoggedInUser?.name),
           ),
           InkWell(
-            onTap: () => _showChangeUsernameDialog(provider),
-            child: _buildSettingsRowItem("Username Profile", Icons.person_search, trailingText: "@${provider.currentlyLoggedInUser?.name.toLowerCase()}"),
+            onTap: () => _showChangeUsernameDialog(provider, isLight),
+            child: _buildSettingsRowItem("Username Profile", Icons.person_search, isLight, trailingText: "@${provider.currentlyLoggedInUser?.name.toLowerCase()}"),
           ),
-        ]),
+        ], isLight),
 
         _buildSettingsGroupSection("Security & Session Controls", [
           InkWell(
-            onTap: () => _showResetPasswordDialog(provider),
-            child: _buildSettingsRowItem("Reset Password", Icons.password),
+            onTap: () => _showResetPasswordDialog(provider, isLight),
+            child: _buildSettingsRowItem("Reset Password", Icons.password, isLight),
           ),
-          const Divider(color: Colors.white10),
+          Divider(color: isLight ? Colors.black12 : Colors.white10),
           InkWell(
             onTap: () {
               provider.logoutSessionUser();
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Logged out successfully!"), backgroundColor: Colors.orange));
             },
-            child: _buildSettingsRowItem("Logout Current Session", Icons.logout_rounded, isDanger: true),
+            child: _buildSettingsRowItem("Logout Current Session", Icons.logout_rounded, isLight, isDanger: true),
           ),
-        ]),
+        ], isLight),
       ],
     );
   }
 
-  // 🗑️ DELETE CONFIRMATION MODAL
-  void _confirmDeleteTournamentDialog(BuildContext context, TournamentProvider provider, String roomId, String name) {
+  void _confirmDeleteTournamentDialog(BuildContext context, TournamentProvider provider, String roomId, String name, bool isLight) {
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF090B16),
+        backgroundColor: cardBg,
         title: const Text("Delete Tournament?", style: TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: Text("Are you sure you want to permanently delete '$name'? This action cannot be undone.", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        content: Text("Are you sure you want to permanently delete '$name'? This action cannot be undone.", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 12)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
@@ -879,14 +894,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // 🔄 RESET CONFIRMATION MODAL
-  void _confirmResetTournamentDialog(BuildContext context, TournamentProvider provider, String roomId, String name) {
+  void _confirmResetTournamentDialog(BuildContext context, TournamentProvider provider, String roomId, String name, bool isLight) {
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF090B16),
+        backgroundColor: cardBg,
         title: const Text("Reset Tournament Game?", style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: Text("Resetting '$name' will set current round back to 1, clear all history, and reset player points to 0. Continue?", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        content: Text("Resetting '$name' will set current round back to 1, clear all history, and reset player points to 0. Continue?", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 12)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
@@ -903,21 +918,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showMasterEditPlayerModal(BuildContext context, TournamentProvider provider, String roomId, PlayerModel player) {
+  void _showMasterEditPlayerModal(BuildContext context, TournamentProvider provider, String roomId, PlayerModel player, bool isLight) {
     final nameCtrl = TextEditingController(text: player.name);
     final scoreCtrl = TextEditingController(text: (player.tournamentScores[roomId] ?? 0).toString());
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF090B16),
+        backgroundColor: cardBg,
         title: const Text("👑 Master Edit Player", style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: Colors.white54))),
+            TextField(controller: nameCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
             const SizedBox(height: 10),
-            TextField(controller: scoreCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Total Score Points", labelStyle: TextStyle(color: Colors.white54))),
+            TextField(controller: scoreCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Total Score Points", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
           ],
         ),
         actions: [
@@ -940,24 +957,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showMasterEditTournamentModal(BuildContext context, TournamentProvider provider, LocalGameModel game) {
+  void _showMasterEditTournamentModal(BuildContext context, TournamentProvider provider, LocalGameModel game, bool isLight) {
     final nameCtrl = TextEditingController(text: game.gameName);
     final currentRoundCtrl = TextEditingController(text: game.currentRound.toString());
     final maxRoundsCtrl = TextEditingController(text: game.maxRounds.toString());
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF090B16),
+        backgroundColor: cardBg,
         title: const Text("👑 Master Edit Tournament", style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Game Name", labelStyle: TextStyle(color: Colors.white54))),
+            TextField(controller: nameCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Game Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
             const SizedBox(height: 10),
-            TextField(controller: currentRoundCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Current Round", labelStyle: TextStyle(color: Colors.white54))),
+            TextField(controller: currentRoundCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Current Round", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
             const SizedBox(height: 10),
-            TextField(controller: maxRoundsCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Max Rounds", labelStyle: TextStyle(color: Colors.white54))),
+            TextField(controller: maxRoundsCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Max Rounds", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
           ],
         ),
         actions: [
@@ -980,14 +999,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showChangeNameDialog(TournamentProvider provider) {
+  void _showChangeNameDialog(TournamentProvider provider, bool isLight) {
     final ctrl = TextEditingController(text: provider.currentlyLoggedInUser?.name);
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF090B16),
-        title: const Text("Change Name", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: TextField(controller: ctrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Full Name", labelStyle: TextStyle(color: Colors.white54))),
+        backgroundColor: cardBg,
+        title: Text("Change Name", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: TextField(controller: ctrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Full Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -1006,14 +1028,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showChangeUsernameDialog(TournamentProvider provider) {
+  void _showChangeUsernameDialog(TournamentProvider provider, bool isLight) {
     final ctrl = TextEditingController(text: provider.currentlyLoggedInUser?.name.toLowerCase());
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF090B16),
-        title: const Text("Update Username", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: TextField(controller: ctrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Username", labelStyle: TextStyle(color: Colors.white54))),
+        backgroundColor: cardBg,
+        title: Text("Update Username", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: TextField(controller: ctrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Username", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -1029,13 +1054,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showResetPasswordDialog(TournamentProvider provider) {
+  void _showResetPasswordDialog(TournamentProvider provider, bool isLight) {
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF090B16),
-        title: const Text("Reset Password", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: const Text("Click confirm to send password reset instructions to your email.", style: TextStyle(color: Colors.white70, fontSize: 12)),
+        backgroundColor: cardBg,
+        title: Text("Reset Password", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: Text("Click confirm to send password reset instructions to your email.", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 12)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
@@ -1050,77 +1078,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSettingsGroupSection(String header, List<Widget> children) {
+  Widget _buildSettingsGroupSection(String header, List<Widget> children, bool isLight) {
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color borderColor = isLight ? Colors.black12 : Colors.white10;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF090B16), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)),
+      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(header, style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13)),
-          const Divider(color: Colors.white10, height: 20),
+          Text(header, style: const TextStyle(color: Color(0xFF00B4D8), fontWeight: FontWeight.bold, fontSize: 13)),
+          Divider(color: borderColor, height: 20),
           ...children
         ],
       ),
     );
   }
 
-  Widget _buildSettingsRowItem(String title, IconData icon, {String? trailingText, Widget? trailingWidget, bool isDanger = false}) {
+  Widget _buildSettingsRowItem(String title, IconData icon, bool isLight, {String? trailingText, Widget? trailingWidget, bool isDanger = false}) {
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: isDanger ? Colors.redAccent : Colors.white54, size: 16),
-      title: Text(title, style: TextStyle(color: isDanger ? Colors.redAccent : Colors.white.withOpacity(0.8), fontSize: 12)),
-      trailing: trailingWidget ?? (trailingText != null ? Text(trailingText, style: const TextStyle(color: Colors.white30, fontSize: 12)) : const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.white24)),
+      leading: Icon(icon, color: isDanger ? Colors.redAccent : (isLight ? Colors.black54 : Colors.white54), size: 16),
+      title: Text(title, style: TextStyle(color: isDanger ? Colors.redAccent : mainText, fontSize: 12)),
+      trailing: trailingWidget ?? (trailingText != null ? Text(trailingText, style: TextStyle(color: isLight ? Colors.black45 : Colors.white30, fontSize: 12)) : Icon(Icons.arrow_forward_ios_rounded, size: 12, color: isLight ? Colors.black26 : Colors.white24)),
     );
   }
 
-  Widget _metricBlockCard(String title, String val, String sub, IconData i, Color color) {
+  Widget _metricBlockCard(String title, String val, String sub, IconData i, Color color, bool isLight) {
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color borderColor = isLight ? Colors.black12 : Colors.white10;
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     return Container(
       padding: const EdgeInsets.all(16),
       width: 140, 
-      decoration: BoxDecoration(color: const Color(0xFF090B16), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)),
+      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16), border: Border.all(color: borderColor)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text(title, style: const TextStyle(color: Colors.white38, fontSize: 9, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              Icon(i, color: color.withOpacity(0.6), size: 12),
+              Expanded(child: Text(title, style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 9, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Icon(i, color: color.withOpacity(0.8), size: 12),
             ],
           ),
           const SizedBox(height: 8),
-          Text(val, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(val, style: TextStyle(color: mainText, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(sub, style: TextStyle(color: color, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(sub, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
   }
 
-  Widget _buildMetricsCounterRibbon(TournamentProvider p) {
+  Widget _buildMetricsCounterRibbon(TournamentProvider p, bool isLight) {
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       alignment: WrapAlignment.start,
       children: [
-        _metricBlockCard('TOTAL PLAYERS', '${p.sortedPlayers.length}', 'Active Players', Icons.group, const Color(0xFF6C5CE7)),
-        _metricBlockCard('TOURNAMENTS', '${p.allGameRooms.length}', 'Active Events', Icons.emoji_events, Colors.blueAccent),
-        _metricBlockCard('TOTAL GAMES', '200+', 'Loaded Formats', Icons.sports_esports, Colors.orangeAccent),
+        _metricBlockCard('TOTAL PLAYERS', '${p.sortedPlayers.length}', 'Active Players', Icons.group, const Color(0xFF6C5CE7), isLight),
+        _metricBlockCard('TOURNAMENTS', '${p.allGameRooms.length}', 'Active Events', Icons.emoji_events, Colors.blueAccent, isLight),
+        _metricBlockCard('TOTAL GAMES', '200+', 'Loaded Formats', Icons.sports_esports, Colors.orangeAccent, isLight),
       ],
     );
   }
 
-  Widget _buildLiveMatchOverviewCard(TournamentProvider p) {
+  Widget _buildLiveMatchOverviewCard(TournamentProvider p, bool isLight) {
     final room = p.activeGameRoom;
-    if (room == null) return const Center(child: Text("No game session active.", style: TextStyle(color: Colors.white54)));
+    if (room == null) return Center(child: Text("No game session active.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54)));
+
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color borderColor = isLight ? Colors.black12 : Colors.white10;
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF090B16), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
+      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: borderColor)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1132,10 +1173,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), 
                     decoration: BoxDecoration(color: room.liveStatus == 'COMPLETED' ? Colors.green.withOpacity(0.15) : Colors.redAccent.withOpacity(0.15), borderRadius: BorderRadius.circular(6)), 
-                    child: Text(room.liveStatus == 'COMPLETED' ? "FINISHED" : "LIVE", style: TextStyle(color: room.liveStatus == 'COMPLETED' ? Colors.greenAccent : Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold))
+                    child: Text(room.liveStatus == 'COMPLETED' ? "FINISHED" : "LIVE", style: TextStyle(color: room.liveStatus == 'COMPLETED' ? Colors.green : Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold))
                   ),
                   const SizedBox(width: 8),
-                  Text("${room.gameName} • Round ${room.currentRound} / ${room.maxRounds}", style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                  Text("${room.gameName} • Round ${room.currentRound} / ${room.maxRounds}", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
                 ],
               ),
               Text("Result: ${room.matchOutcome}", style: const TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold))
@@ -1144,33 +1185,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           
           if (room.isTeamGame) ...[
-            Text("Record Round ${room.currentRound} Outcome:", style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text("Record Round ${room.currentRound} Outcome:", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54, fontSize: 11)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                  style: ElevatedButton.styleFrom(backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                   onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TEAM_A_WIN'),
-                  child: Text("${room.teamA?.name ?? 'Team A'} Won 🏆", style: const TextStyle(fontSize: 11, color: Colors.white)),
+                  child: Text("${room.teamA?.name ?? 'Team A'} Won 🏆", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white)),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                  style: ElevatedButton.styleFrom(backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                   onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TIE'),
-                  child: const Text("Match Tie 🤝", style: TextStyle(fontSize: 11, color: Colors.white)),
+                  child: Text("Match Tie 🤝", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white)),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                  style: ElevatedButton.styleFrom(backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                   onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TEAM_B_WIN'),
-                  child: Text("${room.teamB?.name ?? 'Team B'} Won 🏆", style: const TextStyle(fontSize: 11, color: Colors.white)),
+                  child: Text("${room.teamB?.name ?? 'Team B'} Won 🏆", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white)),
                 ),
               ],
             ),
 
             if (room.roundHistory.isNotEmpty) ...[
-              const Divider(color: Colors.white10, height: 24),
-              const Text("📋 Round-by-Round History:", style: TextStyle(color: Colors.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+              Divider(color: borderColor, height: 24),
+              const Text("📋 Round-by-Round History:", style: TextStyle(color: Color(0xFF00B4D8), fontSize: 11, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
               Column(
                 children: room.roundHistory.map((rec) {
@@ -1178,8 +1219,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(
                       children: [
-                        Text("Round ${rec.roundNumber}: ", style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
-                        Text(rec.winningTeamName, style: TextStyle(color: rec.outcome == 'TIE' ? Colors.blueAccent : Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text("Round ${rec.roundNumber}: ", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text(rec.winningTeamName, style: TextStyle(color: rec.outcome == 'TIE' ? Colors.blue : Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   );
@@ -1187,17 +1228,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
               )
             ]
           ] else ...[
-            const Center(child: Text("Solo match results can be updated in the leaderboard tab.", style: TextStyle(color: Colors.white38, fontSize: 11))),
+            Center(child: Text("Solo match results can be updated in the leaderboard tab.", style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 11))),
           ]
         ],
       ),
     );
   }
 
-  Widget _buildAnalyticsGraphsIntegrationCard(TournamentProvider p) {
+  Widget _buildAnalyticsGraphsIntegrationCard(TournamentProvider p, bool isLight) {
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color borderColor = isLight ? Colors.black12 : Colors.white10;
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF090B16), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
+      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(20), border: Border.all(color: borderColor)),
       child: Wrap(
         spacing: 16,
         runSpacing: 16,
@@ -1209,9 +1254,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text("App Status", style: TextStyle(color: Colors.white38, fontSize: 10)),
-                  Text("Connected Live", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                children: [
+                  Text("App Status", style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 10)),
+                  Text("Connected Live", style: TextStyle(color: mainText, fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               )
             ],
@@ -1224,8 +1269,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Top Rank #1", style: TextStyle(color: Colors.white38, fontSize: 10)),
-                  Text(p.sortedPlayers.isNotEmpty ? p.sortedPlayers.first.name : "N/A", style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text("Top Rank #1", style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 10)),
+                  Text(p.sortedPlayers.isNotEmpty ? p.sortedPlayers.first.name : "N/A", style: TextStyle(color: mainText, fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               )
             ],
@@ -1235,26 +1280,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildPodiumVisualizer3DCard(TournamentProvider p) {
+  Widget _buildPodiumVisualizer3DCard(TournamentProvider p, bool isLight) {
     final room = p.activeGameRoom;
     bool isTeam = room?.isTeamGame ?? false;
+
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color borderColor = isLight ? Colors.black12 : Colors.white10;
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
 
     return Container(
       padding: const EdgeInsets.all(16),
       height: 240,
-      decoration: BoxDecoration(color: const Color(0xFF090B16), borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.white10)),
+      decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(24), border: Border.all(color: borderColor)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(isTeam ? "TEAM ROUND WINS PODIUM" : "WINNERS PODIUM", style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(isTeam ? "TEAM ROUND WINS PODIUM" : "WINNERS PODIUM", style: TextStyle(color: mainText, fontSize: 11, fontWeight: FontWeight.bold)),
           const Spacer(),
           if (isTeam && room != null) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _podiumColumn("${room.teamA?.name}\n(${room.teamA?.roundsWon ?? 0} Wins)", "Team A", 60, Colors.cyanAccent),
-                _podiumColumn("${room.teamB?.name}\n(${room.teamB?.roundsWon ?? 0} Wins)", "Team B", 60, Colors.purpleAccent),
+                _podiumColumn("${room.teamA?.name}\n(${room.teamA?.roundsWon ?? 0} Wins)", "Team A", 60, Colors.cyanAccent, isLight),
+                _podiumColumn("${room.teamB?.name}\n(${room.teamB?.roundsWon ?? 0} Wins)", "Team B", 60, Colors.purpleAccent, isLight),
               ],
             )
           ] else ...[
@@ -1262,9 +1311,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                _podiumColumn(p.sortedPlayers.length > 1 ? p.sortedPlayers[1].name : "Empty", "2nd", 50, Colors.grey),
-                _podiumColumn(p.sortedPlayers.isNotEmpty ? p.sortedPlayers[0].name : "Empty", "1st🥇", 80, Colors.amber),
-                _podiumColumn(p.sortedPlayers.length > 2 ? p.sortedPlayers[2].name : "Empty", "3rd", 40, Colors.orangeAccent),
+                _podiumColumn(p.sortedPlayers.length > 1 ? p.sortedPlayers[1].name : "Empty", "2nd", 50, Colors.grey, isLight),
+                _podiumColumn(p.sortedPlayers.isNotEmpty ? p.sortedPlayers[0].name : "Empty", "1st🥇", 80, Colors.amber, isLight),
+                _podiumColumn(p.sortedPlayers.length > 2 ? p.sortedPlayers[2].name : "Empty", "3rd", 40, Colors.orangeAccent, isLight),
               ],
             )
           ]
@@ -1273,13 +1322,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildLiveSearchBoxPanel() {
+  Widget _buildLiveSearchBoxPanel(bool isLight) {
+    Color bg = isLight ? Colors.white : const Color(0xFF0F1426);
+    Color border = isLight ? Colors.black12 : Colors.white10;
+    Color textColor = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(color: const Color(0xFF0F1426), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white10)),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: border)),
       child: TextField(
-        style: const TextStyle(color: Colors.white, fontSize: 13),
-        decoration: const InputDecoration(icon: Icon(Icons.search, color: Colors.cyanAccent, size: 18), hintText: "Search player by name...", hintStyle: TextStyle(color: Colors.white24, fontSize: 12), border: InputBorder.none),
+        style: TextStyle(color: textColor, fontSize: 13),
+        decoration: InputDecoration(icon: const Icon(Icons.search, color: Color(0xFF00B4D8), size: 18), hintText: "Search player by name...", hintStyle: TextStyle(color: isLight ? Colors.black38 : Colors.white24, fontSize: 12), border: InputBorder.none),
         onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
       ),
     );
@@ -1321,19 +1374,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTopRibbonHeaderView(PlayerModel user, TournamentProvider provider) {
+  Widget _buildTopRibbonHeaderView(PlayerModel user, TournamentProvider provider, bool isLight) {
+    Color barBg = isLight ? Colors.white : const Color(0xFF060813);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     return Container(
       padding: const EdgeInsets.all(16),
-      color: const Color(0xFF060813),
+      color: barBg,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Expanded(child: Text("Welcome, ${user.name}! 👋", style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text("Welcome, ${user.name}! 👋", style: TextStyle(color: mainText, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
           Row(
             children: [
               if (provider.isMasterEditMode)
                 Container(margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Text("⚡ GOD MODE ON", style: TextStyle(color: Colors.amber, fontSize: 9, fontWeight: FontWeight.bold))),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.cyanAccent.withOpacity(0.08), borderRadius: BorderRadius.circular(8)), child: const Text("🟢 Live System", style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold))),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.cyanAccent.withOpacity(0.08), borderRadius: BorderRadius.circular(8)), child: const Text("🟢 Live System", style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold))),
             ],
           ),
         ],
@@ -1341,13 +1397,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _podiumColumn(String player, String place, double ht, Color c) {
+  Widget _podiumColumn(String player, String place, double ht, Color c, bool isLight) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           constraints: const BoxConstraints(maxWidth: 80),
-          child: Text(player, style: const TextStyle(color: Colors.white, fontSize: 10), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+          child: Text(player, style: TextStyle(color: isLight ? const Color(0xFF0F172A) : Colors.white, fontSize: 10), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
         ),
         const SizedBox(height: 4),
         Container(
@@ -1360,40 +1416,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showAddPlayerActionModal(BuildContext context, TournamentProvider provider) {
+  void _showAddPlayerActionModal(BuildContext context, TournamentProvider provider, bool isLight) {
     final String currentSport = provider.activeGameRoom?.gameType ?? 'Cricket';
     List<String> dynamicRoles = _getDynamicSpecialtiesForGame(currentSport);
     _selectedRoleDraftType = dynamicRoles.first; 
+
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
-          backgroundColor: const Color(0xFF090B16),
-          title: const Text("Add New Player", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          backgroundColor: cardBg,
+          title: Text("Add New Player", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
                 controller: _addPlayerNameCtrl, 
-                style: const TextStyle(color: Colors.white), 
-                decoration: const InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: Colors.white54))
+                style: TextStyle(color: mainText), 
+                decoration: InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))
               ),
               const SizedBox(height: 20),
-              const Text("Select Player Role:", style: TextStyle(color: Colors.white54, fontSize: 11)),
+              Text("Select Player Role:", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54, fontSize: 11)),
               const SizedBox(height: 6),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: const Color(0xFF14182E), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF14182E), borderRadius: BorderRadius.circular(8)),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: _selectedRoleDraftType,
-                    dropdownColor: const Color(0xFF090B16),
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.cyanAccent),
+                    dropdownColor: cardBg,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF00B4D8)),
                     items: dynamicRoles.map((String choice) {
-                      return DropdownMenuItem<String>(value: choice, child: Text(choice, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)));
+                      return DropdownMenuItem<String>(value: choice, child: Text(choice, style: TextStyle(color: mainText, fontSize: 13, fontWeight: FontWeight.bold)));
                     }).toList(),
                     onChanged: (newValue) {
                       if (newValue != null) {
@@ -1433,40 +1492,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _showLaunchNewTournamentDialog(BuildContext context, TournamentProvider p) {
+  void _showLaunchNewTournamentDialog(BuildContext context, TournamentProvider p, bool isLight) {
     final titleCtrl = TextEditingController();
     final roundsCtrl = TextEditingController(text: "5"); 
     String localSelectedGame = 'Cricket';
     String localSelectedSubFormat = 'Gully Cricket';
     bool isTeamMatch = true;
 
+    Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
+    Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) => AlertDialog(
-          backgroundColor: const Color(0xFF090B16),
-          title: const Text("Create New Tournament", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          backgroundColor: cardBg,
+          title: Text("Create New Tournament", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(controller: titleCtrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Tournament Name")),
+                TextField(controller: titleCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Tournament Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
                 const SizedBox(height: 16),
                 TextField(
                   controller: roundsCtrl, 
-                  style: const TextStyle(color: Colors.white), 
+                  style: TextStyle(color: mainText), 
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: "Total Rounds"),
+                  decoration: InputDecoration(labelText: "Total Rounds", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54)),
                 ),
                 const SizedBox(height: 16),
-                const Text("Select Sport", style: TextStyle(color: Colors.white38, fontSize: 11)),
+                Text("Select Sport", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 11)),
                 DropdownButton<String>(
                   value: localSelectedGame,
                   isExpanded: true,
-                  dropdownColor: const Color(0xFF090B16),
+                  dropdownColor: cardBg,
                   items: _gameFormatsDatabase.keys.map((String value) {
-                    return DropdownMenuItem<String>(value: value, child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)));
+                    return DropdownMenuItem<String>(value: value, child: Text(value, style: TextStyle(color: mainText, fontSize: 13)));
                   }).toList(),
                   onChanged: (val) {
                     setModalState(() {
@@ -1477,21 +1539,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                const Text("Select Format", style: TextStyle(color: Colors.white38, fontSize: 11)),
+                Text("Select Format", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 11)),
                 DropdownButton<String>(
                   value: localSelectedSubFormat,
                   isExpanded: true,
-                  dropdownColor: const Color(0xFF090B16),
+                  dropdownColor: cardBg,
                   items: _gameFormatsDatabase[localSelectedGame]!.map((String value) {
-                    return DropdownMenuItem<String>(value: value, child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)));
+                    return DropdownMenuItem<String>(value: value, child: Text(value, style: TextStyle(color: mainText, fontSize: 13)));
                   }).toList(),
                   onChanged: (val) => setModalState(() => localSelectedSubFormat = val!),
                 ),
                 if (isTeamMatch) ...[
-                  const Divider(color: Colors.white24, height: 24),
-                  TextField(controller: _teamANameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team A Name (Optional)")),
+                  Divider(color: isLight ? Colors.black12 : Colors.white24, height: 24),
+                  TextField(controller: _teamANameController, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Team A Name (Optional)", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
                   const SizedBox(height: 10),
-                  TextField(controller: _teamBNameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team B Name (Optional)")),
+                  TextField(controller: _teamBNameController, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Team B Name (Optional)", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
                 ]
               ],
             ),

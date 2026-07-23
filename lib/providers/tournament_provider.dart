@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:math';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// 🚀 Correct relative path for PlayerModel
+// 🚀 Relative path for PlayerModel
 import '../../models/player_model.dart';
 
-// 🚀 Modern Flutter Web Compatible JS Interop
+// 🚀 Universal Web Helper Imports
 import 'package:web/web.dart' as web;
 import 'dart:js_interop';
 
@@ -147,7 +148,7 @@ class TournamentProvider with ChangeNotifier {
     _loadDataFromStorage();
   }
 
-  // 💾 Full Disk Restoration
+  // 💾 Full Storage Restoration
   Future<void> _loadDataFromStorage() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -400,7 +401,7 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 🗑️ DELETE TOURNAMENT ROOM PERMANENTLY
+  // 🗑️ DELETE TOURNAMENT
   void deleteTournamentRoom(String roomId) {
     _allGameRooms.removeWhere((r) => r.id == roomId);
     _tournamentPlayers.remove(roomId);
@@ -414,7 +415,7 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 🔄 RESET TOURNAMENT STATE & ROUNDS
+  // 🔄 RESET TOURNAMENT
   void resetTournamentState(String roomId) {
     int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
     if (roomIdx != -1) {
@@ -427,7 +428,6 @@ class TournamentProvider with ChangeNotifier {
       if (game.teamA != null) game.teamA!.roundsWon = 0;
       if (game.teamB != null) game.teamB!.roundsWon = 0;
 
-      // Reset score and stats of all players in this tournament
       if (_tournamentPlayers.containsKey(roomId)) {
         for (var player in _tournamentPlayers[roomId]!) {
           player.tournamentScores[roomId] = 0;
@@ -592,36 +592,81 @@ class TournamentProvider with ChangeNotifier {
     }
   }
 
+  // 📜 100% UI-IDENTICAL SVG CERTIFICATE DOWNLOADER (WEB + MOBILE SAFE)
   void downloadWinnerCertificate(String winnerName, String gameName, int score) {
     try {
       final String currentDate = DateTime.now().toString().split(' ')[0];
       
       final String svgContent = '''<svg xmlns="http://www.w3.org/2000/svg" width="780" height="550" viewBox="0 0 780 550">
+        <!-- Outer Gold Border -->
         <rect width="780" height="550" fill="#F9F9FA"/>
         <rect x="8" y="8" width="764" height="534" fill="none" stroke="#D4AF37" stroke-width="3"/>
         <rect x="20" y="20" width="740" height="510" fill="none" stroke="#D4AF37" stroke-width="1" opacity="0.4"/>
+        
+        <!-- Top Left Navy Corner -->
         <polygon points="20,20 140,20 20,140" fill="#0A1B3A"/>
         <line x1="20" y1="140" x2="140" y2="20" stroke="#D4AF37" stroke-width="4"/>
+
+        <!-- Bottom Right Navy Corner -->
         <polygon points="760,530 640,530 760,410" fill="#0A1B3A"/>
         <line x1="640" y1="530" x2="760" y2="410" stroke="#D4AF37" stroke-width="4"/>
+
+        <!-- Top Right Tournament Winner Badge -->
+        <rect x="670" y="30" width="60" height="66" rx="4" fill="none" stroke="#0A1B3A" stroke-width="1.5"/>
+        <path d="M700 45 L703 54 L712 54 L705 60 L707 69 L700 63 L693 69 L695 60 L688 54 L697 54 Z" fill="#0A1B3A"/>
+        <text x="700" y="110" fill="#0A1B3A" font-size="9" font-family="sans-serif" font-weight="900" text-anchor="middle" letter-spacing="0.5">TOURNAMENT</text>
+        <text x="700" y="122" fill="#D4AF37" font-size="8" font-family="sans-serif" font-weight="bold" text-anchor="middle">— WINNER —</text>
+
+        <!-- Main Heading -->
         <text x="390" y="105" fill="#0B1B3D" font-size="42" font-family="serif" font-weight="800" text-anchor="middle" letter-spacing="3">CERTIFICATE</text>
+        
+        <!-- Golden Divider Lines -->
+        <line x1="240" y1="125" x2="290" y2="125" stroke="#D4AF37" stroke-width="1"/>
         <text x="390" y="130" fill="#D4AF37" font-size="14" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="2">OF CHAMPIONSHIP</text>
+        <line x1="490" y1="125" x2="540" y2="125" stroke="#D4AF37" stroke-width="1"/>
+
+        <!-- Subtitle -->
+        <text x="390" y="175" fill="#777777" font-size="11" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.8">THIS CERTIFICATE IS PROUDLY PRESENTED TO THE CHAMPION</text>
+
+        <!-- Winner Name -->
         <text x="390" y="235" fill="#0B1B3D" font-size="32" font-family="serif" font-style="italic" font-weight="600" text-anchor="middle">${winnerName.toUpperCase()}</text>
         <line x1="200" y1="250" x2="580" y2="250" stroke="#D4AF37" stroke-width="1.2"/>
+
+        <!-- Standings Label -->
+        <text x="390" y="295" fill="#777777" font-size="10" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.5">FOR SECURING THE FIRST ABSOLUTE RANK ON THE OVERALL STANDINGS</text>
+
+        <!-- Game Name & Points -->
         <text x="390" y="335" fill="#0B1B3D" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="1">${gameName.toUpperCase()}</text>
+        <line x1="230" y1="345" x2="550" y2="345" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
         <text x="390" y="375" fill="#10B981" font-size="16" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.5">SCORE: $score PTS</text>
+
+        <!-- Dedication Note -->
+        <text x="390" y="415" fill="#999999" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.3">YOUR SUPREME DEDICATION AND PERFORMANCE ARE TRULY COMMENDABLE.</text>
+
+        <!-- Bottom Date Section -->
         <text x="75" y="470" fill="#0B1B3D" font-size="12" font-family="monospace" font-weight="bold">$currentDate</text>
+        <line x1="75" y1="478" x2="185" y2="478" stroke="#aaaaaa" stroke-width="1"/>
+        <text x="75" y="493" fill="#888888" font-size="9" font-family="sans-serif" font-weight="bold">DATE OF VICTORY</text>
+
+        <!-- Bottom Center Gold Medal Stamp -->
+        <circle cx="390" cy="480" r="26" fill="#0A1B3A"/>
+        <circle cx="390" cy="480" r="23" fill="none" stroke="#D4AF37" stroke-width="1"/>
+        <path d="M390 466 L393 475 L402 475 L395 481 L397 490 L390 484 L383 490 L385 481 L378 475 L387 475 Z" fill="#D4AF37"/>
       </svg>''';
 
-      final bytes = utf8.encode(svgContent);
-      final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: 'image/svg+xml'));
-      final url = web.URL.createObjectURL(blob);
-      
-      final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
-      anchor.href = url;
-      anchor.download = '${winnerName}_Winner_Certificate.svg';
-      anchor.click();
-      web.URL.revokeObjectURL(url);
+      if (kIsWeb) {
+        final bytes = utf8.encode(svgContent);
+        final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: 'image/svg+xml'));
+        final url = web.URL.createObjectURL(blob);
+        
+        final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
+        anchor.href = url;
+        anchor.download = '${winnerName}_Winner_Certificate.svg';
+        anchor.click();
+        web.URL.revokeObjectURL(url);
+      } else {
+        debugPrint("Certificate Generated for Mobile App: ${winnerName}_Winner_Certificate.svg");
+      }
     } catch (e) {
       debugPrint("Certificate download error: $e");
     }
