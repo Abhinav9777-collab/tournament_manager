@@ -18,9 +18,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _searchQuery = ""; 
   String _selectedRoleDraftType = 'All-Rounder'; 
 
-  // --- NEW FEATURES STATES (SETTINGS & MASTER EDIT) ---
-  bool _isMasterEditModeEnabled = false; 
-
   final _addPlayerNameCtrl = TextEditingController();
   final _addPlayerEmailCtrl = TextEditingController();
   
@@ -79,9 +76,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isTablet = screenWidth >= 768 && screenWidth < 1150;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF020308),
+      backgroundColor: provider.appThemeMode == ThemeMode.light ? const Color(0xFFF1F5F9) : const Color(0xFF020308),
       appBar: isMobile ? AppBar(
-        backgroundColor: const Color(0xFF060813),
+        backgroundColor: provider.appThemeMode == ThemeMode.light ? const Color(0xFF1E293B) : const Color(0xFF060813),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('TOURNAMENT MANAGER', style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
@@ -107,7 +104,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Expanded(
             child: Column(
               children: [
-                _buildTopRibbonHeaderView(currentUser),
+                _buildTopRibbonHeaderView(currentUser, provider),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 150),
@@ -268,6 +265,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       leading: const CircleAvatar(backgroundColor: Color(0xFF14182E), child: Icon(Icons.person, size: 14, color: Colors.cyanAccent)),
                       title: Text(p.name, style: const TextStyle(color: Colors.white, fontSize: 13)),
                       subtitle: Text("Role: $r", style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                      trailing: provider.isMasterEditMode ? IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.amber, size: 18),
+                        onPressed: () => _showMasterEditPlayerModal(context, provider, provider.activeGameRoomId!, p),
+                      ) : null,
                     );
                   },
                 );
@@ -300,11 +301,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: ListTile(
                     leading: const Icon(Icons.hub, color: Colors.purpleAccent),
                     title: Text(t.gameName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    subtitle: Text("Game: ${t.gameType} • Total Rounds: ${t.maxRounds}", style: const TextStyle(color: Colors.white38, fontSize: 11)),
-                    trailing: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: isMounted ? Colors.green : const Color(0xFF6C5CE7)),
-                      onPressed: () => provider.selectGameRoom(t.id), 
-                      child: Text(isMounted ? "Selected ✓" : "Select", style: const TextStyle(fontSize: 11))
+                    subtitle: Text("Game: ${t.gameType} • Round: ${t.currentRound}/${t.maxRounds} • Status: ${t.liveStatus}", style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (provider.isMasterEditMode)
+                          IconButton(
+                            icon: const Icon(Icons.settings, color: Colors.amber, size: 20),
+                            onPressed: () => _showMasterEditTournamentModal(context, provider, t),
+                          ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: isMounted ? Colors.green : const Color(0xFF6C5CE7)),
+                          onPressed: () => provider.selectGameRoom(t.id), 
+                          child: Text(isMounted ? "Selected ✓" : "Select", style: const TextStyle(fontSize: 11))
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -332,10 +343,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final String targetGame = room?.gameType ?? 'Cricket';
     final String currentId = provider.activeGameRoomId!;
     
-    // --- ROUND REDUCTION CALCULATIONS ---
+    // --- ROUND CALCULATIONS ---
     int totalConfiguredRounds = room?.maxRounds ?? 5;
-    int currentCompletedRound = room?.currentRound ?? 0;
-    int roundsLeft = math.max(0, totalConfiguredRounds - currentCompletedRound);
+    int currentCompletedRound = room?.currentRound ?? 1;
+    int roundsLeft = math.max(0, totalConfiguredRounds - currentCompletedRound + 1);
 
     return StreamBuilder<List<PlayerModel>>(
       stream: provider.streamPlayers(),
@@ -348,7 +359,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         return Column(
           children: [
-            // 🏆 DYNAMIC ROUNDS COUNTER HEADER BANNER
+            // 🏆 DYNAMIC ROUNDS COUNTER HEADER BANNER & FINISH ROUND BUTTON
             Container(
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: 12),
@@ -365,20 +376,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Active Game: ${room?.gameName}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                      Text("Completed Rounds: $currentCompletedRound / $totalConfiguredRounds", style: const TextStyle(color: Colors.white54, fontSize: 10)),
+                      Text("Current Round: $currentCompletedRound / $totalConfiguredRounds", style: const TextStyle(color: Colors.white54, fontSize: 10)),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: roundsLeft > 0 ? Colors.cyanAccent.withOpacity(0.15) : Colors.redAccent.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: roundsLeft > 0 ? Colors.cyanAccent : Colors.redAccent),
-                    ),
-                    child: Text(
-                      roundsLeft > 0 ? "Rounds Left: $roundsLeft" : "Match Finished 🏁",
-                      style: TextStyle(color: roundsLeft > 0 ? Colors.cyanAccent : Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
+                  
+                  // 🎯 FIX: FINISH CURRENT ROUND BUTTON (PREVENTS ACCIDENTAL ROUND DECREMENT)
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF9F43), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+                        icon: const Icon(Icons.done_all, color: Colors.black, size: 14),
+                        label: const Text("Finish Round", style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+                        onPressed: () {
+                          provider.completeRoundAndAdvance(currentId);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("✅ Round Completed! Advanced to next round."), backgroundColor: Colors.green),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: roundsLeft > 0 ? Colors.cyanAccent.withOpacity(0.15) : Colors.redAccent.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: roundsLeft > 0 ? Colors.cyanAccent : Colors.redAccent),
+                        ),
+                        child: Text(
+                          room?.liveStatus == 'COMPLETED' ? "Match Finished 🏁" : "Rounds Left: $roundsLeft",
+                          style: TextStyle(color: roundsLeft > 0 ? Colors.cyanAccent : Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
                   )
                 ],
               ),
@@ -435,8 +464,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ],
                           ),
                           IconButton(
-                            icon: Icon(Icons.edit_note_rounded, color: (roundsLeft > 0 || _isMasterEditModeEnabled) ? Colors.cyanAccent : Colors.grey, size: 20),
-                            onPressed: (roundsLeft > 0 || _isMasterEditModeEnabled) ? () {
+                            icon: Icon(Icons.edit_note_rounded, color: (roundsLeft > 0 || provider.isMasterEditMode) ? Colors.cyanAccent : Colors.grey, size: 20),
+                            onPressed: (roundsLeft > 0 || provider.isMasterEditMode) ? () {
                               _showModernPerformanceEntryDialog(context, provider, currentId, p.id, userRole);
                             } : () {
                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Tournament Rounds Completed! Turn on Master Edit Mode in Settings to override."), backgroundColor: Colors.orange));
@@ -455,19 +484,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 child: Text("Rank $val", style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))
                               );
                             }).toList(),
-                            onChanged: (roundsLeft > 0 || _isMasterEditModeEnabled) ? (selectedRank) {
+                            onChanged: (roundsLeft > 0 || provider.isMasterEditMode) ? (selectedRank) {
                               if (selectedRank != null) {
                                 provider.awardPositionalPoints(currentId, p.id, selectedRank, allPlayers.length);
-                                // 📉 ADVANCE / REDUCE ROUND UPON RANKING ENTRY
-                                if (room != null && (room.currentRound < room.maxRounds || _isMasterEditModeEnabled)) {
-                                  room.currentRound += 1;
-                                  provider.notifyListeners();
-                                }
                               }
                             } : null,
                           ),
                         ],
                         
+                        // 👑 MASTER EDIT GOD MODE TRIGGER BUTTON FOR SINGLE PLAYER
+                        if (provider.isMasterEditMode)
+                          IconButton(
+                            icon: const Icon(Icons.mode_edit_outline_rounded, color: Colors.amber, size: 18),
+                            onPressed: () => _showMasterEditPlayerModal(context, provider, currentId, p),
+                          ),
+
                         const SizedBox(width: 8),
                         Text("$totalComputedScore Pts", style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12)),
                       ],
@@ -490,7 +521,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF090B16),
-        title: Text("Edit Score ($role)", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        title: Text("Edit Performance ($role)", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -516,19 +547,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               int runs = int.tryParse(_runsInputCtrl.text.trim()) ?? 0;
               int wickets = int.tryParse(_wicketsInputCtrl.text.trim()) ?? 0;
               provider.submitPlayerCricketPerformance(roomId, playerId, runs, wickets);
-
-              // 📉 ADVANCE ROUND & REDUCE REMAINING ROUNDS AUTOMATICALLY
-              final room = provider.activeGameRoom;
-              if (room != null) {
-                if (room.currentRound < room.maxRounds || _isMasterEditModeEnabled) {
-                  room.currentRound += 1;
-                  provider.notifyListeners();
-                }
-              }
-
               Navigator.pop(context);
             },
-            child: const Text("Save & Advance Round"),
+            child: const Text("Save Score"),
           )
         ],
       ),
@@ -546,6 +567,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final PlayerModel winnerPlayer = allPlayers.first; 
+    final int winnerScore = winnerPlayer.tournamentScores[provider.activeGameRoomId!] ?? 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -717,8 +739,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
+                // 📜 TRIGGER DIRECT WEB FILE DOWNLOAD
+                provider.downloadWinnerCertificate(
+                  winnerPlayer.name,
+                  provider.activeGameRoom?.gameName ?? "Tournament",
+                  winnerScore,
+                );
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Success! Championship Certificate generated for ${winnerPlayer.name}."), backgroundColor: Colors.green)
+                  SnackBar(content: Text("Downloading Certificate for ${winnerPlayer.name}!"), backgroundColor: Colors.green)
                 );
               }, 
               icon: const Icon(Icons.download_for_offline_rounded, color: Colors.white), 
@@ -747,16 +775,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: const Text("Master Edit Mode (God Mode)", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
             subtitle: const Text("Allows editing scores, rounds and ranks for ANY game at any time", style: TextStyle(color: Colors.white38, fontSize: 10)),
             trailing: Switch(
-              value: _isMasterEditModeEnabled,
+              value: provider.isMasterEditMode,
               activeColor: Colors.cyanAccent,
               onChanged: (val) {
-                setState(() => _isMasterEditModeEnabled = val);
+                provider.toggleMasterEditMode(val);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(val ? "⚡ Master Edit Mode Enabled!" : "Master Edit Mode Disabled."),
                     backgroundColor: val ? Colors.cyan : Colors.grey,
                   )
                 );
+              },
+            ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.color_lens_rounded, color: Colors.purpleAccent, size: 18),
+            title: const Text("Dark Theme Mode", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+            subtitle: const Text("Switch UI presentation background theme mode", style: TextStyle(color: Colors.white38, fontSize: 10)),
+            trailing: Switch(
+              value: provider.appThemeMode == ThemeMode.dark,
+              activeColor: Colors.purpleAccent,
+              onChanged: (val) {
+                provider.updateThemeMode(val ? ThemeMode.dark : ThemeMode.light);
               },
             ),
           ),
@@ -774,14 +815,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ]),
 
-        // 🔐 SECURITY SETTINGS
-        _buildSettingsGroupSection("Security Settings", [
+        // 🔐 SECURITY SETTINGS & LOGOUT
+        _buildSettingsGroupSection("Security & Session Controls", [
           InkWell(
             onTap: () => _showResetPasswordDialog(provider),
             child: _buildSettingsRowItem("Reset Password", Icons.password),
           ),
+          const Divider(color: Colors.white10),
+          InkWell(
+            onTap: () {
+              provider.logoutSessionUser();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Logged out successfully!"), backgroundColor: Colors.orange));
+            },
+            child: _buildSettingsRowItem("Logout Current Session", Icons.logout_rounded, isDanger: true),
+          ),
         ]),
       ],
+    );
+  }
+
+  // 👑 GOD MODE MODALS (MASTER EDIT PLAYERS & TOURNAMENTS)
+  void _showMasterEditPlayerModal(BuildContext context, TournamentProvider provider, String roomId, PlayerModel player) {
+    final nameCtrl = TextEditingController(text: player.name);
+    final scoreCtrl = TextEditingController(text: (player.tournamentScores[roomId] ?? 0).toString());
+    String currentRole = provider.getPlayerRole(player.id);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF090B16),
+        title: const Text("👑 Master Edit Player", style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: Colors.white54))),
+            const SizedBox(height: 10),
+            TextField(controller: scoreCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Total Score Points", labelStyle: TextStyle(color: Colors.white54))),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () {
+              provider.masterEditPlayerDetails(
+                roomId: roomId,
+                playerId: player.id,
+                newName: nameCtrl.text.trim(),
+                newScore: int.tryParse(scoreCtrl.text.trim()) ?? 0,
+              );
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player Master Edits Saved!"), backgroundColor: Colors.green));
+            },
+            child: const Text("Save Overrides"),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showMasterEditTournamentModal(BuildContext context, TournamentProvider provider, LocalGameModel game) {
+    final nameCtrl = TextEditingController(text: game.gameName);
+    final currentRoundCtrl = TextEditingController(text: game.currentRound.toString());
+    final maxRoundsCtrl = TextEditingController(text: game.maxRounds.toString());
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF090B16),
+        title: const Text("👑 Master Edit Tournament", style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: nameCtrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Game Name", labelStyle: TextStyle(color: Colors.white54))),
+            const SizedBox(height: 10),
+            TextField(controller: currentRoundCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Current Round", labelStyle: TextStyle(color: Colors.white54))),
+            const SizedBox(height: 10),
+            TextField(controller: maxRoundsCtrl, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Max Rounds", labelStyle: TextStyle(color: Colors.white54))),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () {
+              provider.masterEditTournamentDetails(
+                roomId: game.id,
+                newGameName: nameCtrl.text.trim(),
+                newCurrentRound: int.tryParse(currentRoundCtrl.text.trim()),
+                newMaxRounds: int.tryParse(maxRoundsCtrl.text.trim()),
+              );
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Tournament Master Edits Saved!"), backgroundColor: Colors.green));
+            },
+            child: const Text("Save Overrides"),
+          )
+        ],
+      ),
     );
   }
 
@@ -1094,7 +1222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTopRibbonHeaderView(PlayerModel user) {
+  Widget _buildTopRibbonHeaderView(PlayerModel user, TournamentProvider provider) {
     return Container(
       padding: const EdgeInsets.all(16),
       color: const Color(0xFF060813),
@@ -1102,7 +1230,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(child: Text("Welcome, ${user.name}! 👋", style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
-          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.cyanAccent.withOpacity(0.08), borderRadius: BorderRadius.circular(8)), child: const Text("🟢 Live System", style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold))),
+          Row(
+            children: [
+              if (provider.isMasterEditMode)
+                Container(margin: const EdgeInsets.only(right: 8), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.amber.withOpacity(0.2), borderRadius: BorderRadius.circular(8)), child: const Text("⚡ GOD MODE ON", style: TextStyle(color: Colors.amber, fontSize: 9, fontWeight: FontWeight.bold))),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.cyanAccent.withOpacity(0.08), borderRadius: BorderRadius.circular(8)), child: const Text("🟢 Live System", style: TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold))),
+            ],
+          ),
         ],
       ),
     );
@@ -1228,9 +1362,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   value: localSelectedGame,
                   isExpanded: true,
                   dropdownColor: const Color(0xFF090B16),
-                  items: p.allGameRooms.isEmpty ? _gameFormatsDatabase.keys.map((String value) {
-                    return DropdownMenuItem<String>(value: value, child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)));
-                  }).toList() : _gameFormatsDatabase.keys.map((String value) {
+                  items: _gameFormatsDatabase.keys.map((String value) {
                     return DropdownMenuItem<String>(value: value, child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)));
                   }).toList(),
                   onChanged: (val) {
