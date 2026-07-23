@@ -4,10 +4,13 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart'; // 🏆 SECURE MOBILE DISK STORAGE ENGINE
 import '../../models/player_model.dart';
 
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html; // For Web Certificate Download
+
 class LocalTeam {
   final String id;
-  final String name;
-  final String captainName;
+  String name;
+  String captainName;
   int matchesWon;
 
   LocalTeam({required this.id, required this.name, required this.captainName, this.matchesWon = 0});
@@ -15,9 +18,9 @@ class LocalTeam {
 
 class LocalGameModel {
   final String id;
-  final String gameName;
+  String gameName;
   final String gameType; 
-  final int totalRounds;
+  int totalRounds;
   int maxRounds; // 🏆 Max rounds for tournament
   int currentRound; // 📉 Completed rounds counter
   final LocalTeam? teamA; 
@@ -55,6 +58,7 @@ class TournamentProvider with ChangeNotifier {
   // 🛠️ SETTINGS OPTIONS PIPELINE
   ThemeMode _appThemeMode = ThemeMode.dark; 
   bool _isEditPointsEnabled = true; 
+  bool _isMasterEditMode = false; // 👑 GOD MODE SWITCH
 
   // 🔐 PERMANENT STORAGE DATABASE MAPS
   Map<String, Map<String, dynamic>> _savedAccountsDatabase = {};
@@ -127,6 +131,7 @@ class TournamentProvider with ChangeNotifier {
 
   ThemeMode get appThemeMode => _appThemeMode;
   bool get isEditPointsEnabled => _isEditPointsEnabled;
+  bool get isMasterEditMode => _isMasterEditMode;
 
   LocalGameModel? get activeGameRoom {
     if (_activeGameRoomId == null || _allGameRooms.isEmpty) return null;
@@ -165,8 +170,14 @@ class TournamentProvider with ChangeNotifier {
     return _tournamentPlayerRoles[_activeGameRoomId!]?[playerId] ?? 'Standard Player';
   }
 
+  // 🌓 THEME MODE TOGGLE (LIGHT / DARK)
   void updateThemeMode(ThemeMode mode) {
     _appThemeMode = mode;
+    notifyListeners();
+  }
+
+  void toggleMasterEditMode(bool value) {
+    _isMasterEditMode = value;
     notifyListeners();
   }
 
@@ -316,7 +327,7 @@ class TournamentProvider with ChangeNotifier {
       gameType: gameType, 
       totalRounds: maxRounds, 
       maxRounds: maxRounds,
-      currentRound: 0, // Starts at Round 0
+      currentRound: 1, // Round 1 se start hoga
       teamA: tA, 
       teamB: tB, 
       liveStatus: 'LIVE', 
@@ -330,6 +341,7 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // 🏏 Player Stats Update (Without Decrementing Round Per Player)
   void submitPlayerCricketPerformance(String roomId, String playerId, int runs, int wickets) {
     if (_activeGameRoomId == null || !_isEditPointsEnabled) return; 
     final String rId = _activeGameRoomId!;
@@ -372,6 +384,97 @@ class TournamentProvider with ChangeNotifier {
       int existingPoints = player.tournamentScores[roomId] ?? 0;
       player.tournamentScores[roomId] = existingPoints + pointsGained; 
       notifyListeners();
+    }
+  }
+
+  // 🎯 FIX: ROUND TABHI KHATAM HOGA JAB SABHI PLAYERS KO SCORE MIL JAYE GA
+  void completeRoundAndAdvance(String roomId) {
+    int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
+    if (roomIdx != -1) {
+      var game = _allGameRooms[roomIdx];
+      if (game.currentRound < game.maxRounds) {
+        game.currentRound += 1; // Moves to Next Round (e.g., Round 1 -> Round 2)
+      } else {
+        game.liveStatus = 'COMPLETED'; // Rounds exhausted
+      }
+      notifyListeners();
+    }
+  }
+
+  // 👑 MASTER EDIT MODE (GOD MODE): EDIT PLAYER NAME, SCORES & ROLES
+  void masterEditPlayerDetails({
+    required String roomId,
+    required String playerId,
+    String? newName,
+    String? newRole,
+    int? newScore,
+  }) {
+    int playerIdx = (_tournamentPlayers[roomId] ?? []).indexWhere((p) => p.id == playerId);
+    if (playerIdx != -1) {
+      var player = _tournamentPlayers[roomId]![playerIdx];
+      if (newName != null && newName.trim().isNotEmpty) {
+        player.name = newName.trim();
+      }
+      if (newScore != null) {
+        player.tournamentScores[roomId] = newScore;
+      }
+      if (newRole != null && newRole.isNotEmpty) {
+        _tournamentPlayerRoles[roomId]?[playerId] = newRole;
+      }
+      notifyListeners();
+    }
+  }
+
+  // 👑 MASTER EDIT MODE (GOD MODE): EDIT TOURNAMENT DETAILS & ROUNDS
+  void masterEditTournamentDetails({
+    required String roomId,
+    String? newGameName,
+    int? newCurrentRound,
+    int? newMaxRounds,
+    String? newStatus,
+  }) {
+    int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
+    if (roomIdx != -1) {
+      var game = _allGameRooms[roomIdx];
+      if (newGameName != null && newGameName.trim().isNotEmpty) {
+        game.gameName = newGameName.trim();
+      }
+      if (newCurrentRound != null) {
+        game.currentRound = newCurrentRound;
+      }
+      if (newMaxRounds != null) {
+        game.maxRounds = newMaxRounds;
+        game.totalRounds = newMaxRounds;
+      }
+      if (newStatus != null) {
+        game.liveStatus = newStatus;
+      }
+      notifyListeners();
+    }
+  }
+
+  // 📜 WEB CERTIFICATE DOWNLOAD TRIGGER
+  void downloadWinnerCertificate(String winnerName, String gameName, int score) {
+    try {
+      final String svgContent = '''<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+        <rect width="800" height="600" fill="#0f172a"/>
+        <rect x="20" y="20" width="760" height="560" fill="none" stroke="#f59e0b" stroke-width="6"/>
+        <text x="400" y="100" fill="#ffffff" font-size="34" font-family="sans-serif" text-anchor="middle" font-weight="bold">CERTIFICATE OF CHAMPION</text>
+        <text x="400" y="180" fill="#94a3b8" font-size="20" font-family="sans-serif" text-anchor="middle">This is proudly presented to</text>
+        <text x="400" y="270" fill="#f59e0b" font-size="44" font-family="sans-serif" text-anchor="middle" font-weight="bold">$winnerName</text>
+        <text x="400" y="340" fill="#ffffff" font-size="22" font-family="sans-serif" text-anchor="middle">For winning 1st Place in $gameName</text>
+        <text x="400" y="410" fill="#10b981" font-size="26" font-family="sans-serif" text-anchor="middle" font-weight="bold">Final Score: $score PTS</text>
+        <text x="400" y="520" fill="#64748b" font-size="16" font-family="sans-serif" text-anchor="middle">Tournament Manager OS • Official Verification</text>
+      </svg>''';
+
+      final blob = html.Blob([svgContent], 'image/svg+xml');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute("download", "${winnerName}_Winner_Certificate.svg")
+        ..click();
+      html.Url.revokeObjectUrl(url);
+    } catch (e) {
+      debugPrint("Certificate download error: $e");
     }
   }
 
