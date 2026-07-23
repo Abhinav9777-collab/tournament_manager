@@ -147,7 +147,7 @@ class TournamentProvider with ChangeNotifier {
     _loadDataFromStorage();
   }
 
-  // 💾 Full Disk Restoration (Restores Accounts, Games, Players, AND Roles)
+  // 💾 Full Disk Restoration
   Future<void> _loadDataFromStorage() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -190,7 +190,6 @@ class TournamentProvider with ChangeNotifier {
         }
       }
 
-      // 🏆 Restore Players List Per Tournament Room
       if (savedPlayers != null && savedPlayers.isNotEmpty) {
         final Map<String, dynamic> decodedPlayersMap = jsonDecode(savedPlayers);
         _tournamentPlayers.clear();
@@ -203,7 +202,6 @@ class TournamentProvider with ChangeNotifier {
         });
       }
 
-      // 🏆 Restore Roles Map
       if (savedRoles != null && savedRoles.isNotEmpty) {
         final Map<String, dynamic> decodedRolesMap = jsonDecode(savedRoles);
         _tournamentPlayerRoles.clear();
@@ -230,14 +228,12 @@ class TournamentProvider with ChangeNotifier {
       await prefs.setString('account_devices_db', jsonEncode(_accountActiveDevices));
       await prefs.setString('all_game_rooms_data', jsonEncode(_allGameRooms.map((r) => r.toJson()).toList()));
       
-      // Serialize players map
       Map<String, dynamic> playersToSave = {};
       _tournamentPlayers.forEach((roomId, pList) {
         playersToSave[roomId] = pList.map((p) => p.toJson()).toList();
       });
       await prefs.setString('all_tournament_players', jsonEncode(playersToSave));
 
-      // Serialize roles map
       await prefs.setString('all_tournament_player_roles', jsonEncode(_tournamentPlayerRoles));
 
       if (_currentlyLoggedInUser != null) {
@@ -402,6 +398,46 @@ class TournamentProvider with ChangeNotifier {
     _activeGameRoomId = roomId;
     _syncToStorage();
     notifyListeners();
+  }
+
+  // 🗑️ DELETE TOURNAMENT ROOM PERMANENTLY
+  void deleteTournamentRoom(String roomId) {
+    _allGameRooms.removeWhere((r) => r.id == roomId);
+    _tournamentPlayers.remove(roomId);
+    _tournamentPlayerRoles.remove(roomId);
+
+    if (_activeGameRoomId == roomId) {
+      _activeGameRoomId = _allGameRooms.isNotEmpty ? _allGameRooms.first.id : null;
+    }
+
+    _syncToStorage();
+    notifyListeners();
+  }
+
+  // 🔄 RESET TOURNAMENT STATE & ROUNDS
+  void resetTournamentState(String roomId) {
+    int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
+    if (roomIdx != -1) {
+      var game = _allGameRooms[roomIdx];
+      game.currentRound = 1;
+      game.liveStatus = 'LIVE';
+      game.matchOutcome = 'IN_PROGRESS';
+      game.roundHistory.clear();
+
+      if (game.teamA != null) game.teamA!.roundsWon = 0;
+      if (game.teamB != null) game.teamB!.roundsWon = 0;
+
+      // Reset score and stats of all players in this tournament
+      if (_tournamentPlayers.containsKey(roomId)) {
+        for (var player in _tournamentPlayers[roomId]!) {
+          player.tournamentScores[roomId] = 0;
+          player.gameStats.remove(roomId);
+        }
+      }
+
+      _syncToStorage();
+      notifyListeners();
+    }
   }
 
   void recordTeamRoundOutcome(String roomId, String roundOutcome) {

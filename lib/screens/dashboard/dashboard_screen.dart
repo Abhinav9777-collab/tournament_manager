@@ -286,7 +286,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // 🏆 ACTIVE TOURNAMENTS VIEW WITH DELETE & SELECT CONTROLS
   Widget _buildTournamentsActiveHubView(TournamentProvider provider) {
+    if (provider.allGameRooms.isEmpty) {
+      return const Center(child: Text("No tournaments created yet. Click '+ Create Tournament' to start.", style: TextStyle(color: Colors.white38)));
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -321,6 +326,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onPressed: () => provider.selectGameRoom(t.id), 
                           child: Text(isMounted ? "Selected ✓" : "Select", style: const TextStyle(fontSize: 11))
                         ),
+                        const SizedBox(width: 8),
+                        
+                        // 🗑️ DELETE TOURNAMENT BUTTON
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                          onPressed: () => _confirmDeleteTournamentDialog(context, provider, t.id, t.gameName),
+                        )
                       ],
                     ),
                   ),
@@ -386,6 +398,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   
                   Row(
                     children: [
+                      // 🔄 RESET TOURNAMENT BUTTON
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.amber),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6)
+                        ),
+                        icon: const Icon(Icons.restart_alt_rounded, color: Colors.amber, size: 14),
+                        label: const Text("Reset Game", style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
+                        onPressed: () => _confirmResetTournamentDialog(context, provider, currentId, room?.gameName ?? "Game"),
+                      ),
+                      const SizedBox(width: 8),
+
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF9F43), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
                         icon: const Icon(Icons.done_all, color: Colors.black, size: 14),
@@ -828,6 +852,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ]),
       ],
+    );
+  }
+
+  // 🗑️ DELETE CONFIRMATION MODAL
+  void _confirmDeleteTournamentDialog(BuildContext context, TournamentProvider provider, String roomId, String name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF090B16),
+        title: const Text("Delete Tournament?", style: TextStyle(color: Colors.redAccent, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: Text("Are you sure you want to permanently delete '$name'? This action cannot be undone.", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () {
+              provider.deleteTournamentRoom(roomId);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Deleted '$name' successfully!"), backgroundColor: Colors.redAccent));
+            },
+            child: const Text("Delete"),
+          )
+        ],
+      ),
+    );
+  }
+
+  // 🔄 RESET CONFIRMATION MODAL
+  void _confirmResetTournamentDialog(BuildContext context, TournamentProvider provider, String roomId, String name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF090B16),
+        title: const Text("Reset Tournament Game?", style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: Text("Resetting '$name' will set current round back to 1, clear all history, and reset player points to 0. Continue?", style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+            onPressed: () {
+              provider.resetTournamentState(roomId);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Reset '$name'! Starting fresh from Round 1."), backgroundColor: Colors.green));
+            },
+            child: const Text("Reset Game", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
     );
   }
 
@@ -1361,7 +1433,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // 🏆 SIMPLIFIED CREATION DIALOG (Team 1 & 2 extra fields removed)
   void _showLaunchNewTournamentDialog(BuildContext context, TournamentProvider p) {
     final titleCtrl = TextEditingController();
     final roundsCtrl = TextEditingController(text: "5"); 
