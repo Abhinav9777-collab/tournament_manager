@@ -1,19 +1,65 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart'; // 🏆 SECURE MOBILE DISK STORAGE ENGINE
+import 'package:shared_preferences/shared_preferences.dart';
+
+// 🚀 Correct relative path for PlayerModel
 import '../../models/player_model.dart';
 
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html; // For Web Certificate Download
+// 🚀 Modern Flutter Web Compatible JS Interop
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 
 class LocalTeam {
   final String id;
   String name;
   String captainName;
-  int matchesWon;
+  int roundsWon;
 
-  LocalTeam({required this.id, required this.name, required this.captainName, this.matchesWon = 0});
+  LocalTeam({
+    required this.id, 
+    required this.name, 
+    required this.captainName, 
+    this.roundsWon = 0
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'captainName': captainName,
+    'roundsWon': roundsWon,
+  };
+
+  factory LocalTeam.fromJson(Map<String, dynamic> json) => LocalTeam(
+    id: json['id'],
+    name: json['name'],
+    captainName: json['captainName'],
+    roundsWon: json['roundsWon'] ?? 0,
+  );
+}
+
+class RoundResultRecord {
+  final int roundNumber;
+  final String outcome; 
+  final String winningTeamName;
+
+  RoundResultRecord({
+    required this.roundNumber,
+    required this.outcome,
+    required this.winningTeamName,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'roundNumber': roundNumber,
+    'outcome': outcome,
+    'winningTeamName': winningTeamName,
+  };
+
+  factory RoundResultRecord.fromJson(Map<String, dynamic> json) => RoundResultRecord(
+    roundNumber: json['roundNumber'],
+    outcome: json['outcome'],
+    winningTeamName: json['winningTeamName'],
+  );
 }
 
 class LocalGameModel {
@@ -21,13 +67,14 @@ class LocalGameModel {
   String gameName;
   final String gameType; 
   int totalRounds;
-  int maxRounds; // 🏆 Max rounds for tournament
-  int currentRound; // 📉 Completed rounds counter
+  int maxRounds; 
+  int currentRound; 
   final LocalTeam? teamA; 
   final LocalTeam? teamB; 
   String liveStatus; 
   final bool isTeamGame;
   String matchOutcome; 
+  List<RoundResultRecord> roundHistory; 
 
   LocalGameModel({
     required this.id, 
@@ -35,13 +82,47 @@ class LocalGameModel {
     required this.gameType,
     required this.totalRounds, 
     int? maxRounds,
-    this.currentRound = 0,
+    this.currentRound = 1,
     this.teamA, 
     this.teamB, 
     this.liveStatus = 'LIVE', 
     required this.isTeamGame, 
-    this.matchOutcome = 'PENDING'
-  }) : maxRounds = maxRounds ?? totalRounds;
+    this.matchOutcome = 'IN_PROGRESS',
+    List<RoundResultRecord>? roundHistory,
+  }) : maxRounds = maxRounds ?? totalRounds,
+       roundHistory = roundHistory ?? [];
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'gameName': gameName,
+    'gameType': gameType,
+    'totalRounds': totalRounds,
+    'maxRounds': maxRounds,
+    'currentRound': currentRound,
+    'teamA': teamA?.toJson(),
+    'teamB': teamB?.toJson(),
+    'liveStatus': liveStatus,
+    'isTeamGame': isTeamGame,
+    'matchOutcome': matchOutcome,
+    'roundHistory': roundHistory.map((r) => r.toJson()).toList(),
+  };
+
+  factory LocalGameModel.fromJson(Map<String, dynamic> json) => LocalGameModel(
+    id: json['id'],
+    gameName: json['gameName'],
+    gameType: json['gameType'],
+    totalRounds: json['totalRounds'],
+    maxRounds: json['maxRounds'],
+    currentRound: json['currentRound'] ?? 1,
+    teamA: json['teamA'] != null ? LocalTeam.fromJson(json['teamA']) : null,
+    teamB: json['teamB'] != null ? LocalTeam.fromJson(json['teamB']) : null,
+    liveStatus: json['liveStatus'] ?? 'LIVE',
+    isTeamGame: json['isTeamGame'] ?? false,
+    matchOutcome: json['matchOutcome'] ?? 'IN_PROGRESS',
+    roundHistory: json['roundHistory'] != null 
+        ? (json['roundHistory'] as List).map((r) => RoundResultRecord.fromJson(r)).toList()
+        : [],
+  );
 }
 
 class TournamentProvider with ChangeNotifier {
@@ -55,27 +136,25 @@ class TournamentProvider with ChangeNotifier {
   final Map<String, List<PlayerModel>> _tournamentPlayers = {}; 
   final Map<String, Map<String, String>> _tournamentPlayerRoles = {}; 
 
-  // 🛠️ SETTINGS OPTIONS PIPELINE
   ThemeMode _appThemeMode = ThemeMode.dark; 
   bool _isEditPointsEnabled = true; 
-  bool _isMasterEditMode = false; // 👑 GOD MODE SWITCH
+  bool _isMasterEditMode = false;
 
-  // 🔐 PERMANENT STORAGE DATABASE MAPS
   Map<String, Map<String, dynamic>> _savedAccountsDatabase = {};
   Map<String, List<String>> _accountActiveDevices = {};
 
   TournamentProvider() {
-    _loadDataFromMobileDisk();
+    _loadDataFromStorage();
   }
 
-  // 💾 HARD DISK RETRIEVAL SYSTEM (APP OPEN HOTE HI LOAD HOGA)
-  Future<void> _loadDataFromMobileDisk() async {
+  Future<void> _loadDataFromStorage() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       
       final String? savedDb = prefs.getString('saved_accounts_db');
       final String? savedDevices = prefs.getString('account_devices_db');
       final String? savedSession = prefs.getString('current_user_session');
+      final String? savedRooms = prefs.getString('all_game_rooms_data');
 
       if (savedDb != null && savedDb.isNotEmpty) {
         final Map<String, dynamic> decoded = jsonDecode(savedDb);
@@ -96,18 +175,30 @@ class TournamentProvider with ChangeNotifier {
           tournamentScores: {},
         );
       }
+
+      if (savedRooms != null && savedRooms.isNotEmpty) {
+        final List decodedRooms = jsonDecode(savedRooms);
+        _allGameRooms.clear();
+        for (var r in decodedRooms) {
+          _allGameRooms.add(LocalGameModel.fromJson(r));
+        }
+        if (_allGameRooms.isNotEmpty) {
+          _activeGameRoomId = _allGameRooms.first.id;
+        }
+      }
+
       notifyListeners();
     } catch (e) {
-      debugPrint("Mobile internal block storage read completed.");
+      debugPrint("Local storage data loaded.");
     }
   }
 
-  // 💾 HARD DISK WRITER SYSTEM (ACCOUNT BANATE YA LOGIN KARTE HI DIRECT SAVE)
-  Future<void> _syncToMobileDisk() async {
+  Future<void> _syncToStorage() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('saved_accounts_db', jsonEncode(_savedAccountsDatabase));
       await prefs.setString('account_devices_db', jsonEncode(_accountActiveDevices));
+      await prefs.setString('all_game_rooms_data', jsonEncode(_allGameRooms.map((r) => r.toJson()).toList()));
       
       if (_currentlyLoggedInUser != null) {
         await prefs.setString('current_user_session', jsonEncode({
@@ -119,7 +210,7 @@ class TournamentProvider with ChangeNotifier {
         await prefs.remove('current_user_session');
       }
     } catch (e) {
-      debugPrint("Mobile sector synchronization completed.");
+      debugPrint("Local storage sync completed.");
     }
   }
 
@@ -143,15 +234,6 @@ class TournamentProvider with ChangeNotifier {
     return _tournamentPlayers[_activeGameRoomId!] ?? [];
   }
 
-  List<LocalGameModel> get filteredGameRooms {
-    if (_currentLiveFilterTab == 'LIVE') {
-      return _allGameRooms.where((r) => r.liveStatus == 'LIVE').toList();
-    } else if (_currentLiveFilterTab == 'COMPLETED') {
-      return _allGameRooms.where((r) => r.liveStatus == 'COMPLETED').toList();
-    }
-    return _allGameRooms;
-  }
-
   List<PlayerModel> get sortedPlayers {
     if (_activeGameRoomId == null) return [];
     List<PlayerModel> sorted = List.from(globalRegisteredPlayers);
@@ -170,7 +252,6 @@ class TournamentProvider with ChangeNotifier {
     return _tournamentPlayerRoles[_activeGameRoomId!]?[playerId] ?? 'Standard Player';
   }
 
-  // 🌓 THEME MODE TOGGLE (LIGHT / DARK)
   void updateThemeMode(ThemeMode mode) {
     _appThemeMode = mode;
     notifyListeners();
@@ -181,39 +262,17 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleEditPoints(bool value) {
-    _isEditPointsEnabled = value;
-    notifyListeners();
-  }
-
-  void setLiveFilterTab(String tabLabel) {
-    _currentLiveFilterTab = tabLabel;
-    notifyListeners();
-  }
-
   void selectGameRoom(String roomId) {
     _activeGameRoomId = roomId;
     notifyListeners();
   }
 
-  void changeLanguage(String code) {
-    _selectedLanguageCode = code;
-    notifyListeners();
-  }
-
-  // 🛠️ SIGNUP WITH PERMANENT STORAGE LOCK
   String registerNewUser(String username, String email, String password) {
     final cleanUsername = username.trim();
     final cleanEmail = email.trim().toLowerCase();
 
     if (_savedAccountsDatabase.containsKey(cleanUsername)) {
       return "Username already taken. Please choose another.";
-    }
-
-    for (var account in _savedAccountsDatabase.values) {
-      if (account['email'] == cleanEmail) {
-        return "Registration Blocked: An account with this email already exists.";
-      }
     }
 
     _savedAccountsDatabase[cleanUsername] = {
@@ -224,13 +283,11 @@ class TournamentProvider with ChangeNotifier {
     };
     
     _accountActiveDevices[cleanUsername] = [];
-
-    _syncToMobileDisk(); // Instantly write to phone storage sector
+    _syncToStorage();
     notifyListeners();
     return "SUCCESS";
   }
 
-  // 🛠️ LOGIN VALIDATED VIA INTERNAL STORAGE FILES
   String loginUser(String username, String password, String deviceId) {
     final cleanUsername = username.trim();
 
@@ -243,27 +300,6 @@ class TournamentProvider with ChangeNotifier {
       return "Incorrect password. Please try again.";
     }
 
-    _accountActiveDevices[cleanUsername] ??= [];
-    List<String> activeDevices = _accountActiveDevices[cleanUsername]!;
-
-    if (activeDevices.contains(deviceId)) {
-      _currentlyLoggedInUser = PlayerModel(
-        id: accountData['id'], 
-        name: accountData['username'], 
-        email: accountData['email'], 
-        tournamentScores: {}
-      );
-      _syncToMobileDisk();
-      notifyListeners();
-      return "SUCCESS";
-    }
-
-    if (activeDevices.length >= 3) {
-      return "Login Denied: This account is already active on 3 devices. Please logout from one.";
-    }
-
-    activeDevices.add(deviceId);
-    
     _currentlyLoggedInUser = PlayerModel(
       id: accountData['id'], 
       name: accountData['username'], 
@@ -271,36 +307,14 @@ class TournamentProvider with ChangeNotifier {
       tournamentScores: {}
     );
     
-    _syncToMobileDisk();
+    _syncToStorage();
     notifyListeners();
     return "SUCCESS";
   }
 
-  // 🔓 LOGOUT SESSIONS SAFELY
   void logoutSessionUser() {
     _currentlyLoggedInUser = null;
-    _syncToMobileDisk();
-    notifyListeners();
-  }
-
-  void clearDeviceSession(String username, String deviceId) {
-    if (_accountActiveDevices.containsKey(username)) {
-      _accountActiveDevices[username]?.remove(deviceId);
-      _syncToMobileDisk();
-      notifyListeners();
-    }
-  }
-
-  void registerNewPlayerWithRole(String name, String role, PlayerModel playerClassObj) {
-    if (_activeGameRoomId == null) return;
-    final String rId = _activeGameRoomId!;
-    
-    _tournamentPlayers[rId] ??= [];
-    _tournamentPlayers[rId]!.add(playerClassObj);
-
-    _tournamentPlayerRoles[rId] ??= {};
-    _tournamentPlayerRoles[rId]![playerClassObj.id] = role;
-    
+    _syncToStorage();
     notifyListeners();
   }
 
@@ -317,8 +331,16 @@ class TournamentProvider with ChangeNotifier {
     LocalTeam? tB;
 
     if (isTeamGame) {
-      tA = LocalTeam(id: 'tm_a_${DateTime.now().millisecondsSinceEpoch}', name: teamAName ?? 'Team A', captainName: teamACaptain ?? 'Captain A');
-      tB = LocalTeam(id: 'tm_b_${DateTime.now().millisecondsSinceEpoch}', name: teamBName ?? 'Team B', captainName: teamBCaptain ?? 'Captain B');
+      tA = LocalTeam(
+        id: 'tm_a_${DateTime.now().millisecondsSinceEpoch}', 
+        name: (teamAName != null && teamAName.trim().isNotEmpty) ? teamAName.trim() : 'Team A', 
+        captainName: teamACaptain ?? 'Captain A'
+      );
+      tB = LocalTeam(
+        id: 'tm_b_${DateTime.now().millisecondsSinceEpoch}', 
+        name: (teamBName != null && teamBName.trim().isNotEmpty) ? teamBName.trim() : 'Team B', 
+        captainName: teamBCaptain ?? 'Captain B'
+      );
     }
 
     final freshGame = LocalGameModel(
@@ -327,7 +349,7 @@ class TournamentProvider with ChangeNotifier {
       gameType: gameType, 
       totalRounds: maxRounds, 
       maxRounds: maxRounds,
-      currentRound: 1, // Round 1 se start hoga
+      currentRound: 1, 
       teamA: tA, 
       teamB: tB, 
       liveStatus: 'LIVE', 
@@ -338,10 +360,65 @@ class TournamentProvider with ChangeNotifier {
     _tournamentPlayers[roomId] = [];
     _tournamentPlayerRoles[roomId] = {};
     _activeGameRoomId = roomId;
+    _syncToStorage();
     notifyListeners();
   }
 
-  // 🏏 Player Stats Update (Without Decrementing Round Per Player)
+  void recordTeamRoundOutcome(String roomId, String roundOutcome) {
+    int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
+    if (roomIdx == -1) return;
+
+    var game = _allGameRooms[roomIdx];
+    if (!game.isTeamGame) return;
+
+    String winningName = "Draw / Tie";
+    if (roundOutcome == 'TEAM_A_WIN') {
+      game.teamA?.roundsWon += 1;
+      winningName = game.teamA?.name ?? "Team A";
+    } else if (roundOutcome == 'TEAM_B_WIN') {
+      game.teamB?.roundsWon += 1;
+      winningName = game.teamB?.name ?? "Team B";
+    }
+
+    game.roundHistory.add(
+      RoundResultRecord(
+        roundNumber: game.currentRound, 
+        outcome: roundOutcome, 
+        winningTeamName: winningName
+      )
+    );
+
+    if (game.currentRound < game.maxRounds) {
+      game.currentRound += 1;
+    } else {
+      game.liveStatus = 'COMPLETED';
+      int winsA = game.teamA?.roundsWon ?? 0;
+      int winsB = game.teamB?.roundsWon ?? 0;
+
+      if (winsA > winsB) {
+        game.matchOutcome = '${game.teamA?.name.toUpperCase()} WINS TOURNAMENT 🏆';
+      } else if (winsB > winsA) {
+        game.matchOutcome = '${game.teamB?.name.toUpperCase()} WINS TOURNAMENT 🏆';
+      } else {
+        game.matchOutcome = 'TOURNAMENT TIED 🤝';
+      }
+    }
+
+    _syncToStorage();
+    notifyListeners();
+  }
+
+  void registerNewPlayerWithRole(String name, String role, PlayerModel playerClassObj) {
+    if (_activeGameRoomId == null) return;
+    final String rId = _activeGameRoomId!;
+    _tournamentPlayers[rId] ??= [];
+    _tournamentPlayers[rId]!.add(playerClassObj);
+    _tournamentPlayerRoles[rId] ??= {};
+    _tournamentPlayerRoles[rId]![playerClassObj.id] = role;
+    _syncToStorage();
+    notifyListeners();
+  }
+
   void submitPlayerCricketPerformance(String roomId, String playerId, int runs, int wickets) {
     if (_activeGameRoomId == null || !_isEditPointsEnabled) return; 
     final String rId = _activeGameRoomId!;
@@ -355,18 +432,15 @@ class TournamentProvider with ChangeNotifier {
     player.gameStats[roomId]!['wickets'] = (player.gameStats[roomId]!['wickets'] ?? 0) + wickets;
 
     String role = getPlayerRole(playerId);
-    int pointsEarned = 0;
-    
-    if (role == 'Batsman Only') {
-      pointsEarned = (runs * 1.5).round(); 
-    } else if (role == 'Bowler Only') {
-      pointsEarned = wickets * 25; 
-    } else {
-      pointsEarned = (runs * 0.7).round() + (wickets * 12); 
-    }
+    int pointsEarned = (role == 'Batsman Only') 
+        ? (runs * 1.5).round() 
+        : (role == 'Bowler Only') 
+            ? wickets * 25 
+            : (runs * 0.7).round() + (wickets * 12);
 
     int basePoints = player.tournamentScores[roomId] ?? 0;
     player.tournamentScores[roomId] = basePoints + pointsEarned;
+    _syncToStorage();
     notifyListeners();
   }
 
@@ -383,25 +457,25 @@ class TournamentProvider with ChangeNotifier {
       int pointsGained = (totalPlayers - positionRank + 1) * 10;
       int existingPoints = player.tournamentScores[roomId] ?? 0;
       player.tournamentScores[roomId] = existingPoints + pointsGained; 
+      _syncToStorage();
       notifyListeners();
     }
   }
 
-  // 🎯 FIX: ROUND TABHI KHATAM HOGA JAB SABHI PLAYERS KO SCORE MIL JAYE GA
   void completeRoundAndAdvance(String roomId) {
     int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
     if (roomIdx != -1) {
       var game = _allGameRooms[roomIdx];
       if (game.currentRound < game.maxRounds) {
-        game.currentRound += 1; // Moves to Next Round (e.g., Round 1 -> Round 2)
+        game.currentRound += 1;
       } else {
-        game.liveStatus = 'COMPLETED'; // Rounds exhausted
+        game.liveStatus = 'COMPLETED';
       }
+      _syncToStorage();
       notifyListeners();
     }
   }
 
-  // 👑 MASTER EDIT MODE (GOD MODE): EDIT PLAYER NAME, SCORES & ROLES
   void masterEditPlayerDetails({
     required String roomId,
     required String playerId,
@@ -412,20 +486,14 @@ class TournamentProvider with ChangeNotifier {
     int playerIdx = (_tournamentPlayers[roomId] ?? []).indexWhere((p) => p.id == playerId);
     if (playerIdx != -1) {
       var player = _tournamentPlayers[roomId]![playerIdx];
-      if (newName != null && newName.trim().isNotEmpty) {
-        player.name = newName.trim();
-      }
-      if (newScore != null) {
-        player.tournamentScores[roomId] = newScore;
-      }
-      if (newRole != null && newRole.isNotEmpty) {
-        _tournamentPlayerRoles[roomId]?[playerId] = newRole;
-      }
+      if (newName != null && newName.trim().isNotEmpty) player.name = newName.trim();
+      if (newScore != null) player.tournamentScores[roomId] = newScore;
+      if (newRole != null && newRole.isNotEmpty) _tournamentPlayerRoles[roomId]?[playerId] = newRole;
+      _syncToStorage();
       notifyListeners();
     }
   }
 
-  // 👑 MASTER EDIT MODE (GOD MODE): EDIT TOURNAMENT DETAILS & ROUNDS
   void masterEditTournamentDetails({
     required String roomId,
     String? newGameName,
@@ -436,114 +504,50 @@ class TournamentProvider with ChangeNotifier {
     int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
     if (roomIdx != -1) {
       var game = _allGameRooms[roomIdx];
-      if (newGameName != null && newGameName.trim().isNotEmpty) {
-        game.gameName = newGameName.trim();
-      }
-      if (newCurrentRound != null) {
-        game.currentRound = newCurrentRound;
-      }
+      if (newGameName != null && newGameName.trim().isNotEmpty) game.gameName = newGameName.trim();
+      if (newCurrentRound != null) game.currentRound = newCurrentRound;
       if (newMaxRounds != null) {
         game.maxRounds = newMaxRounds;
         game.totalRounds = newMaxRounds;
       }
-      if (newStatus != null) {
-        game.liveStatus = newStatus;
-      }
+      if (newStatus != null) game.liveStatus = newStatus;
+      _syncToStorage();
       notifyListeners();
     }
   }
 
-  // 📜 WEB CERTIFICATE DOWNLOAD TRIGGER (EXACT UI MATCHING SVG)
   void downloadWinnerCertificate(String winnerName, String gameName, int score) {
     try {
       final String currentDate = DateTime.now().toString().split(' ')[0];
       
       final String svgContent = '''<svg xmlns="http://www.w3.org/2000/svg" width="780" height="550" viewBox="0 0 780 550">
-        <!-- Outer Gold Border -->
         <rect width="780" height="550" fill="#F9F9FA"/>
         <rect x="8" y="8" width="764" height="534" fill="none" stroke="#D4AF37" stroke-width="3"/>
         <rect x="20" y="20" width="740" height="510" fill="none" stroke="#D4AF37" stroke-width="1" opacity="0.4"/>
-        
-        <!-- Top Left Navy Corner -->
         <polygon points="20,20 140,20 20,140" fill="#0A1B3A"/>
         <line x1="20" y1="140" x2="140" y2="20" stroke="#D4AF37" stroke-width="4"/>
-
-        <!-- Bottom Right Navy Corner -->
         <polygon points="760,530 640,530 760,410" fill="#0A1B3A"/>
         <line x1="640" y1="530" x2="760" y2="410" stroke="#D4AF37" stroke-width="4"/>
-
-        <!-- Top Right Tournament Winner Badge -->
-        <rect x="670" y="30" width="60" height="66" rx="4" fill="none" stroke="#0A1B3A" stroke-width="1.5"/>
-        <path d="M700 45 L703 54 L712 54 L705 60 L707 69 L700 63 L693 69 L695 60 L688 54 L697 54 Z" fill="#0A1B3A"/>
-        <text x="700" y="110" fill="#0A1B3A" font-size="9" font-family="sans-serif" font-weight="900" text-anchor="middle" letter-spacing="0.5">TOURNAMENT</text>
-        <text x="700" y="122" fill="#D4AF37" font-size="8" font-family="sans-serif" font-weight="bold" text-anchor="middle">— WINNER —</text>
-
-        <!-- Main Heading -->
         <text x="390" y="105" fill="#0B1B3D" font-size="42" font-family="serif" font-weight="800" text-anchor="middle" letter-spacing="3">CERTIFICATE</text>
-        
-        <!-- Golden Divider Lines -->
-        <line x1="240" y1="125" x2="290" y2="125" stroke="#D4AF37" stroke-width="1"/>
         <text x="390" y="130" fill="#D4AF37" font-size="14" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="2">OF CHAMPIONSHIP</text>
-        <line x1="490" y1="125" x2="540" y2="125" stroke="#D4AF37" stroke-width="1"/>
-
-        <!-- Subtitle -->
-        <text x="390" y="175" fill="#777777" font-size="11" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.8">THIS CERTIFICATE IS PROUDLY PRESENTED TO THE CHAMPION</text>
-
-        <!-- Winner Name -->
         <text x="390" y="235" fill="#0B1B3D" font-size="32" font-family="serif" font-style="italic" font-weight="600" text-anchor="middle">${winnerName.toUpperCase()}</text>
         <line x1="200" y1="250" x2="580" y2="250" stroke="#D4AF37" stroke-width="1.2"/>
-
-        <!-- Standings Label -->
-        <text x="390" y="295" fill="#777777" font-size="10" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.5">FOR SECURING THE FIRST ABSOLUTE RANK ON THE OVERALL STANDINGS</text>
-
-        <!-- Game Name & Points -->
         <text x="390" y="335" fill="#0B1B3D" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="1">${gameName.toUpperCase()}</text>
-        <line x1="230" y1="345" x2="550" y2="345" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
         <text x="390" y="375" fill="#10B981" font-size="16" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.5">SCORE: $score PTS</text>
-
-        <!-- Dedication Note -->
-        <text x="390" y="415" fill="#999999" font-size="9" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.3">YOUR SUPREME DEDICATION AND PERFORMANCE ARE TRULY COMMENDABLE.</text>
-
-        <!-- Bottom Date Section -->
         <text x="75" y="470" fill="#0B1B3D" font-size="12" font-family="monospace" font-weight="bold">$currentDate</text>
-        <line x1="75" y1="478" x2="185" y2="478" stroke="#aaaaaa" stroke-width="1"/>
-        <text x="75" y="493" fill="#888888" font-size="9" font-family="sans-serif" font-weight="bold">DATE OF VICTORY</text>
-
-        <!-- Bottom Center Gold Medal Stamp -->
-        <circle cx="390" cy="480" r="26" fill="#0A1B3A"/>
-        <circle cx="390" cy="480" r="23" fill="none" stroke="#D4AF37" stroke-width="1"/>
-        <path d="M390 466 L393 475 L402 475 L395 481 L397 490 L390 484 L383 490 L385 481 L378 475 L387 475 Z" fill="#D4AF37"/>
       </svg>''';
 
-      final blob = html.Blob([svgContent], 'image/svg+xml');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      final anchor = html.AnchorElement(href: url)
-        ..setAttribute("download", "${winnerName}_Winner_Certificate.svg")
-        ..click();
-      html.Url.revokeObjectUrl(url);
+      final bytes = utf8.encode(svgContent);
+      final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: 'image/svg+xml'));
+      final url = web.URL.createObjectURL(blob);
+      
+      final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
+      anchor.href = url;
+      anchor.download = '${winnerName}_Winner_Certificate.svg';
+      anchor.click();
+      web.URL.revokeObjectURL(url);
     } catch (e) {
       debugPrint("Certificate download error: $e");
     }
   }
-
-  void updateTeamOutcomeState(String roomId, String outcome) {
-    int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
-    if (roomIdx != -1) {
-      _allGameRooms[roomIdx].matchOutcome = outcome;
-      if (outcome == 'TEAM_A_WIN' && _allGameRooms[roomIdx].teamA != null) _allGameRooms[roomIdx].teamA!.matchesWon++;
-      if (outcome == 'TEAM_B_WIN' && _allGameRooms[roomIdx].teamB != null) _allGameRooms[roomIdx].teamB!.matchesWon++;
-      notifyListeners();
-    }
-  }
-
-  void markGameAsCompleted(String roomId) {
-    int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
-    if (roomIdx != -1) {
-      _allGameRooms[roomIdx].liveStatus = 'COMPLETED';
-      notifyListeners();
-    }
-  }
-
-  final List<dynamic> tournaments = [];
-  final List<Map<String, dynamic>> pendingApprovalQueue = [];
 }

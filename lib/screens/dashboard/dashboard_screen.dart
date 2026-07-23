@@ -21,6 +21,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _addPlayerNameCtrl = TextEditingController();
   final _addPlayerEmailCtrl = TextEditingController();
   
+  final _teamANameController = TextEditingController();
+  final _teamBNameController = TextEditingController();
   final _teamACaptainController = TextEditingController();
   final _teamBCaptainController = TextEditingController();
 
@@ -343,7 +345,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final String targetGame = room?.gameType ?? 'Cricket';
     final String currentId = provider.activeGameRoomId!;
     
-    // --- ROUND CALCULATIONS ---
     int totalConfiguredRounds = room?.maxRounds ?? 5;
     int currentCompletedRound = room?.currentRound ?? 1;
     int roundsLeft = math.max(0, totalConfiguredRounds - currentCompletedRound + 1);
@@ -359,7 +360,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         return Column(
           children: [
-            // 🏆 DYNAMIC ROUNDS COUNTER HEADER BANNER & FINISH ROUND BUTTON
             Container(
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: 12),
@@ -380,7 +380,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                   
-                  // 🎯 FIX: FINISH CURRENT ROUND BUTTON (PREVENTS ACCIDENTAL ROUND DECREMENT)
                   Row(
                     children: [
                       ElevatedButton.icon(
@@ -419,7 +418,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
-                child: const Text("⏳ SCORE LOCK: Set ranks for ALL players to calculate points.", style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                child: const Text("⏳ RANK REQUIREMENT: Set ranks for ALL players to compute final round scores.", style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
               ),
 
             Expanded(
@@ -492,7 +491,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                         
-                        // 👑 MASTER EDIT GOD MODE TRIGGER BUTTON FOR SINGLE PLAYER
                         if (provider.isMasterEditMode)
                           IconButton(
                             icon: const Icon(Icons.mode_edit_outline_rounded, color: Colors.amber, size: 18),
@@ -739,7 +737,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
-                // 📜 TRIGGER DIRECT WEB FILE DOWNLOAD
                 provider.downloadWinnerCertificate(
                   winnerPlayer.name,
                   provider.activeGameRoom?.gameName ?? "Tournament",
@@ -759,21 +756,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // --- ⚙️ FULLY FUNCTIONAL SETTINGS TAB WITH MASTER EDIT & MODALS ---
   Widget _buildSettingsTabView(TournamentProvider provider) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text("⚙️ SETTINGS & SYSTEM CONTROLS", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+        const Text("⚙️ SETTINGS & APP CONTROLS", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
         const SizedBox(height: 24),
 
-        // ⚡ OVERRIDES & GOD MODE SECTION
-        _buildSettingsGroupSection("System Controls & Overrides", [
+        _buildSettingsGroupSection("System Overrides & Admin Tools", [
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.flash_on_rounded, color: Colors.amber, size: 18),
             title: const Text("Master Edit Mode (God Mode)", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-            subtitle: const Text("Allows editing scores, rounds and ranks for ANY game at any time", style: TextStyle(color: Colors.white38, fontSize: 10)),
+            subtitle: const Text("Allows direct editing of player names, scores, and rounds at any time", style: TextStyle(color: Colors.white38, fontSize: 10)),
             trailing: Switch(
               value: provider.isMasterEditMode,
               activeColor: Colors.cyanAccent,
@@ -792,7 +787,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.color_lens_rounded, color: Colors.purpleAccent, size: 18),
             title: const Text("Dark Theme Mode", style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-            subtitle: const Text("Switch UI presentation background theme mode", style: TextStyle(color: Colors.white38, fontSize: 10)),
+            subtitle: const Text("Toggle between Dark and Light mode themes", style: TextStyle(color: Colors.white38, fontSize: 10)),
             trailing: Switch(
               value: provider.appThemeMode == ThemeMode.dark,
               activeColor: Colors.purpleAccent,
@@ -803,7 +798,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ]),
 
-        // 🪪 PROFILE SETTINGS
         _buildSettingsGroupSection("Profile Settings", [
           InkWell(
             onTap: () => _showChangeNameDialog(provider),
@@ -815,7 +809,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ]),
 
-        // 🔐 SECURITY SETTINGS & LOGOUT
         _buildSettingsGroupSection("Security & Session Controls", [
           InkWell(
             onTap: () => _showResetPasswordDialog(provider),
@@ -834,11 +827,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // 👑 GOD MODE MODALS (MASTER EDIT PLAYERS & TOURNAMENTS)
   void _showMasterEditPlayerModal(BuildContext context, TournamentProvider provider, String roomId, PlayerModel player) {
     final nameCtrl = TextEditingController(text: player.name);
     final scoreCtrl = TextEditingController(text: (player.tournamentScores[roomId] ?? 0).toString());
-    String currentRole = provider.getPlayerRole(player.id);
 
     showDialog(
       context: context,
@@ -866,7 +857,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Player Master Edits Saved!"), backgroundColor: Colors.green));
             },
-            child: const Text("Save Overrides"),
+            child: const Text("Save Changes"),
           )
         ],
       ),
@@ -906,14 +897,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Tournament Master Edits Saved!"), backgroundColor: Colors.green));
             },
-            child: const Text("Save Overrides"),
+            child: const Text("Save Changes"),
           )
         ],
       ),
     );
   }
 
-  // 📝 DIALOGS FOR WORKING SETTINGS
   void _showChangeNameDialog(TournamentProvider provider) {
     final ctrl = TextEditingController(text: provider.currentlyLoggedInUser?.name);
     showDialog(
@@ -946,14 +936,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF090B16),
-        title: const Text("Update Username Handle", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        title: const Text("Update Username", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         content: TextField(controller: ctrl, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Username", labelStyle: TextStyle(color: Colors.white54))),
         actions: [
           ElevatedButton(
             onPressed: () {
               if (ctrl.text.trim().isNotEmpty) {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Username handle updated!"), backgroundColor: Colors.green));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Username updated!"), backgroundColor: Colors.green));
               }
             },
             child: const Text("Update"),
@@ -969,13 +959,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF090B16),
         title: const Text("Reset Password", style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: const Text("Click confirm to dispatch password reset instructions to your registered account.", style: TextStyle(color: Colors.white70, fontSize: 12)),
+        content: const Text("Click confirm to send password reset instructions to your email.", style: TextStyle(color: Colors.white70, fontSize: 12)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("🔐 Reset instructions sent to your email!"), backgroundColor: Colors.purpleAccent));
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("🔐 Reset link sent to your email!"), backgroundColor: Colors.purpleAccent));
             },
             child: const Text("Confirm"),
           )
@@ -1047,6 +1037,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // 🏆 MATCH OVERVIEW WITH TEAM ROUND-BY-ROUND RECORDING
   Widget _buildLiveMatchOverviewCard(TournamentProvider p) {
     final room = p.activeGameRoom;
     if (room == null) return const Center(child: Text("No game session active.", style: TextStyle(color: Colors.white54)));
@@ -1063,9 +1054,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Row(
                 children: [
-                  Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), decoration: BoxDecoration(color: Colors.redAccent.withOpacity(0.15), borderRadius: BorderRadius.circular(6)), child: const Text("LIVE", style: TextStyle(color: Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold))),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), 
+                    decoration: BoxDecoration(color: room.liveStatus == 'COMPLETED' ? Colors.green.withOpacity(0.15) : Colors.redAccent.withOpacity(0.15), borderRadius: BorderRadius.circular(6)), 
+                    child: Text(room.liveStatus == 'COMPLETED' ? "FINISHED" : "LIVE", style: TextStyle(color: room.liveStatus == 'COMPLETED' ? Colors.greenAccent : Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold))
+                  ),
                   const SizedBox(width: 8),
-                  Text("${room.gameName} • Match Status", style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                  Text("${room.gameName} • Round ${room.currentRound} / ${room.maxRounds}", style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
                 ],
               ),
               Text("Result: ${room.matchOutcome}", style: const TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold))
@@ -1074,28 +1069,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           
           if (room.isTeamGame) ...[
+            Text("Record Round ${room.currentRound} Outcome:", style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              alignment: WrapAlignment.center,
               children: [
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: room.matchOutcome == 'TEAM_A_WIN' ? Colors.green : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                  onPressed: () => p.updateTeamOutcomeState(room.id, 'TEAM_A_WIN'),
-                  child: Text("${room.teamA?.captainName ?? 'Team A'} Won 🏆", style: const TextStyle(fontSize: 11)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                  onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TEAM_A_WIN'),
+                  child: Text("${room.teamA?.name ?? 'Team A'} Won 🏆", style: const TextStyle(fontSize: 11, color: Colors.white)),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: room.matchOutcome == 'TIE' ? Colors.blueGrey : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                  onPressed: () => p.updateTeamOutcomeState(room.id, 'TIE'),
-                  child: const Text("Match Tie 🤝", style: TextStyle(fontSize: 11)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                  onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TIE'),
+                  child: const Text("Match Tie 🤝", style: TextStyle(fontSize: 11, color: Colors.white)),
                 ),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: room.matchOutcome == 'TEAM_B_WIN' ? Colors.green : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
-                  onPressed: () => p.updateTeamOutcomeState(room.id, 'TEAM_B_WIN'),
-                  child: Text("${room.teamB?.captainName ?? 'Team B'} Won 🏆", style: const TextStyle(fontSize: 11)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                  onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TEAM_B_WIN'),
+                  child: Text("${room.teamB?.name ?? 'Team B'} Won 🏆", style: const TextStyle(fontSize: 11, color: Colors.white)),
                 ),
               ],
-            )
+            ),
+
+            if (room.roundHistory.isNotEmpty) ...[
+              const Divider(color: Colors.white10, height: 24),
+              const Text("📋 Round-by-Round History:", style: TextStyle(color: Colors.cyanAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Column(
+                children: room.roundHistory.map((rec) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Text("Round ${rec.roundNumber}: ", style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text(rec.winningTeamName, style: TextStyle(color: rec.outcome == 'TIE' ? Colors.blueAccent : Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              )
+            ]
           ] else ...[
             const Center(child: Text("Solo match results can be updated in the leaderboard tab.", style: TextStyle(color: Colors.white38, fontSize: 11))),
           ]
@@ -1145,11 +1160,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // 🥇 ADAPTIVE WINNER PODIUM (TEAM vs SOLO)
   Widget _buildPodiumVisualizer3DCard(TournamentProvider p) {
-    final players = p.sortedPlayers;
-    String p1 = players.isNotEmpty ? players[0].name : "Empty";
-    String p2 = players.length > 1 ? players[1].name : "Empty";
-    String p3 = players.length > 2 ? players[2].name : "Empty";
+    final room = p.activeGameRoom;
+    bool isTeam = room?.isTeamGame ?? false;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1158,17 +1172,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("WINNERS PODIUM", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+          Text(isTeam ? "TEAM ROUND WINS PODIUM" : "WINNERS PODIUM", style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
           const Spacer(),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _podiumColumn(p2, "2nd", 50, Colors.grey),
-              _podiumColumn(p1, "1st🥇", 80, Colors.amber),
-              _podiumColumn(p3, "3rd", 40, Colors.orangeAccent),
-            ],
-          )
+          if (isTeam && room != null) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _podiumColumn("${room.teamA?.name}\n(${room.teamA?.roundsWon ?? 0} Wins)", "Team A", 60, Colors.cyanAccent),
+                _podiumColumn("${room.teamB?.name}\n(${room.teamB?.roundsWon ?? 0} Wins)", "Team B", 60, Colors.purpleAccent),
+              ],
+            )
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _podiumColumn(p.sortedPlayers.length > 1 ? p.sortedPlayers[1].name : "Empty", "2nd", 50, Colors.grey),
+                _podiumColumn(p.sortedPlayers.isNotEmpty ? p.sortedPlayers[0].name : "Empty", "1st🥇", 80, Colors.amber),
+                _podiumColumn(p.sortedPlayers.length > 2 ? p.sortedPlayers[2].name : "Empty", "3rd", 40, Colors.orangeAccent),
+              ],
+            )
+          ]
         ],
       ),
     );
@@ -1247,14 +1272,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          constraints: const BoxConstraints(maxWidth: 65),
-          child: Text(player, style: const TextStyle(color: Colors.white, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+          constraints: const BoxConstraints(maxWidth: 80),
+          child: Text(player, style: const TextStyle(color: Colors.white, fontSize: 10), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
         ),
         const SizedBox(height: 4),
         Container(
-          width: 50, height: ht,
+          width: 65, height: ht,
           alignment: Alignment.center,
-          decoration: BoxDecoration(color: c.withOpacity(0.15), border: Border.all(color: c, width: 1)),
+          decoration: BoxDecoration(color: c.withOpacity(0.15), border: Border.all(color: c, width: 1), borderRadius: BorderRadius.circular(6)),
           child: Text(place, style: TextStyle(color: c, fontWeight: FontWeight.bold, fontSize: 11)),
         )
       ],
@@ -1369,7 +1394,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     setModalState(() {
                       localSelectedGame = val!;
                       localSelectedSubFormat = _gameFormatsDatabase[localSelectedGame]!.first;
-                      isTeamMatch = (localSelectedGame == 'Cricket' || localSelectedGame == 'Football' || localSelectedGame == 'Kabaddi');
+                      isTeamMatch = (localSelectedGame == 'Cricket' || localSelectedGame == 'Football' || localSelectedGame == 'Kabaddi' || localSelectedGame == 'Volleyball' || localSelectedGame == 'Basketball');
                     });
                   },
                 ),
@@ -1386,8 +1411,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 if (isTeamMatch) ...[
                   const Divider(color: Colors.white24, height: 24),
-                  TextField(controller: _teamACaptainController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team A Captain")),
-                  TextField(controller: _teamBCaptainController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team B Captain")),
+                  TextField(controller: _teamANameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team 1 Custom Name (Default: Team A)")),
+                  const SizedBox(height: 8),
+                  TextField(controller: _teamBNameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team 2 Custom Name (Default: Team B)")),
+                  const SizedBox(height: 8),
+                  TextField(controller: _teamACaptainController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team A Captain Name")),
+                  const SizedBox(height: 8),
+                  TextField(controller: _teamBCaptainController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team B Captain Name")),
                 ]
               ],
             ),
@@ -1403,9 +1433,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   gameType: "$localSelectedGame ($localSelectedSubFormat)", 
                   maxRounds: manualRoundsParsed,
                   isTeamGame: isTeamMatch,
-                  teamAName: "Team A", teamACaptain: _teamACaptainController.text.trim(),
-                  teamBName: "Team B", teamBCaptain: _teamBCaptainController.text.trim(),
+                  teamAName: _teamANameController.text.trim().isNotEmpty ? _teamANameController.text.trim() : "Team A", 
+                  teamACaptain: _teamACaptainController.text.trim(),
+                  teamBName: _teamBNameController.text.trim().isNotEmpty ? _teamBNameController.text.trim() : "Team B", 
+                  teamBCaptain: _teamBCaptainController.text.trim(),
                 );
+                _teamANameController.clear();
+                _teamBNameController.clear();
                 _teamACaptainController.clear();
                 _teamBCaptainController.clear();
                 Navigator.pop(context);
