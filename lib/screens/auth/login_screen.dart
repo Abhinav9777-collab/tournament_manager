@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:async';
 import 'dart:math' as math;
 import '../../providers/tournament_provider.dart';
+import '../../services/email_service.dart'; // 🚀 Direct EmailJS Service
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -38,8 +37,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _otpController = TextEditingController();
-
-  final String _backendServerUrl = "https://tournament-manager-b6jb.onrender.com";
 
   @override
   void initState() {
@@ -82,94 +79,78 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // =========================================================================
-  // ⚡ REAL BACKEND OTP PIPELINE (MOCK CODE REMOVED)
+  // 🚀 DIRECT EMAILJS GMAIL OTP PIPELINE (SERVERLESS & 100% RELIABLE)
   // =========================================================================
   Future<void> _handleOtpGenerationRequest() async {
     final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      setState(() => _statusFeedbackMessage = "Please enter an email address first.");
+    final name = _usernameController.text.trim();
+
+    if (name.isEmpty) {
+      setState(() => _statusFeedbackMessage = "Please enter your Name or Username first.");
       return;
     }
+
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _statusFeedbackMessage = "Please enter a valid email address.");
+      return;
+    }
+
     setState(() { 
       _isLoading = true; 
-      _statusFeedbackMessage = 'Transmitting OTP request to server...'; 
+      _statusFeedbackMessage = 'Sending OTP to your email...'; 
     });
 
     try {
-      final response = await http.post(
-        Uri.parse("$_backendServerUrl/api/auth/trigger-otp"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email}),
-      );
-      
-      final res = jsonDecode(response.body);
+      // Direct EmailJS Call
+      bool success = await EmailOtpService.sendOtp(email, name);
 
-      if (response.statusCode == 200 && res['status'] == 'SUCCESS') {
+      if (success) {
         _startOtpTimer();
         setState(() => _statusFeedbackMessage = "SUCCESS: OTP sent to $email. Check your inbox!");
       } else {
-        setState(() => _statusFeedbackMessage = res['message'] ?? 'Failed to send OTP.');
+        setState(() => _statusFeedbackMessage = "Failed to send OTP. Please try again.");
       }
     } catch (e) {
-      setState(() => _statusFeedbackMessage = "Connection Error: Unable to reach auth server.");
+      setState(() => _statusFeedbackMessage = "Network error while triggering email.");
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _verifyOtpCodeLive() async {
+  void _verifyOtpCodeLive() {
     final email = _emailController.text.trim();
     final otp = _otpController.text.trim();
 
     if (otp.isEmpty || email.isEmpty) {
-      setState(() => _statusFeedbackMessage = "Please provide both Email and OTP fields.");
+      setState(() => _statusFeedbackMessage = "Please fill in both Email and OTP fields.");
       return;
     }
 
-    setState(() { 
-      _isLoading = true; 
-      _statusFeedbackMessage = 'Verifying OTP code...'; 
-    });
-
-    try {
-      final response = await http.post(
-        Uri.parse("$_backendServerUrl/api/auth/verify-otp"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"email": email, "otp": otp}),
-      );
-      
-      final res = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && res['status'] == 'SUCCESS') {
-        _countdownTimer?.cancel();
-        setState(() {
-          _isOtpVerified = true;
-          _statusFeedbackMessage = "SUCCESS: Email Verified! Now create your password.";
-        });
-      } else {
-        setState(() => _statusFeedbackMessage = res['message'] ?? 'Invalid or expired OTP code.');
-      }
-    } catch (e) {
-      setState(() => _statusFeedbackMessage = "Verification failed due to network error.");
-    } finally {
-      setState(() => _isLoading = false);
+    if (EmailOtpService.verifyOtp(otp)) {
+      _countdownTimer?.cancel();
+      setState(() {
+        _isOtpVerified = true;
+        _statusFeedbackMessage = "SUCCESS: Email Verified! Now set your password.";
+      });
+    } else {
+      setState(() => _statusFeedbackMessage = "Invalid or expired OTP code.");
     }
   }
 
-  Future<void> _handleAccountCommitment(TournamentProvider provider) async {
+  void _handleAccountCommitment(TournamentProvider provider) {
     final user = _usernameController.text.trim();
     final email = _emailController.text.trim();
     final pass = _passwordController.text.trim();
 
     if (user.isEmpty || email.isEmpty || pass.isEmpty || !_isOtpVerified) {
-      setState(() => _statusFeedbackMessage = "All parameters are mandatory and OTP must be verified.");
+      setState(() => _statusFeedbackMessage = "All fields are required and OTP must be verified.");
       return;
     }
 
     String registerStatus = provider.registerNewUser(user, email, pass);
     if (registerStatus == "SUCCESS") {
-      String mobileSecureDeviceTag = "SECURE_MOBILE_HARDWARE_NODE";
-      String loginStatus = provider.loginUser(user, pass, mobileSecureDeviceTag);
+      String deviceTag = "WEB_BROWSER_SESSION";
+      String loginStatus = provider.loginUser(user, pass, deviceTag);
       if (loginStatus == "SUCCESS") {
         widget.onLoginSuccess();
       } else {
@@ -189,8 +170,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
-    String mobileSecureDeviceTag = "SECURE_MOBILE_HARDWARE_NODE";
-    String result = provider.loginUser(user, pass, mobileSecureDeviceTag);
+    String deviceTag = "WEB_BROWSER_SESSION";
+    String result = provider.loginUser(user, pass, deviceTag);
     
     if (result == "SUCCESS") {
       widget.onLoginSuccess();
@@ -367,7 +348,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: TextButton(
                   style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 14)),
                   onPressed: _isLoading ? null : (_isOtpSent ? _verifyOtpCodeLive : _handleOtpGenerationRequest),
-                  child: Text(_isLoading ? "Connecting..." : (_isOtpSent ? "Verify OTP" : "Send OTP"), style: const TextStyle(color: Color(0xFF8A56FA), fontSize: 12, fontWeight: FontWeight.bold)),
+                  child: Text(_isLoading ? "Sending..." : (_isOtpSent ? "Verify OTP" : "Send OTP"), style: const TextStyle(color: Color(0xFF8A56FA), fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               )
             else
@@ -382,7 +363,7 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 18),
         
         if (_isOtpVerified) ...[
-          _buildInputSectionLabel("Create Cryptographic Password"),
+          _buildInputSectionLabel("Create Password"),
           _buildCustomFormInput(_passwordController, Icons.lock_rounded, "Create a strong password", false, isPasswordField: true, isFieldObscured: _isPasswordObscured,
             suffix: IconButton(
               icon: Icon(_isPasswordObscured ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white38, size: 16),

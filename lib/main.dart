@@ -19,16 +19,27 @@ class TournamentManagerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Nexus Quantum Manager',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        primarySwatch: Colors.deepPurple,
-        useMaterial3: true,
-      ),
-      // 🛠️ FIXED: DashboardScreen handle karega inner authentication state structures ko smoothly
-      home: const DashboardScreen(),
+    return Consumer<TournamentProvider>(
+      builder: (context, provider, child) {
+        return MaterialApp(
+          title: 'Tournament Manager',
+          debugShowCheckedModeBanner: false,
+          themeMode: provider.appThemeMode,
+          theme: ThemeData(
+            brightness: Brightness.light,
+            primarySwatch: Colors.deepPurple,
+            scaffoldBackgroundColor: const Color(0xFFF1F5F9),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            primarySwatch: Colors.deepPurple,
+            scaffoldBackgroundColor: const Color(0xFF03040B),
+            useMaterial3: true,
+          ),
+          home: const DashboardScreen(),
+        );
+      },
     );
   }
 }
