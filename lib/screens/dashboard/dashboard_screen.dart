@@ -21,10 +21,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _addPlayerNameCtrl = TextEditingController();
   final _addPlayerEmailCtrl = TextEditingController();
   
+  // Clean Single Controllers for Team Names
   final _teamANameController = TextEditingController();
   final _teamBNameController = TextEditingController();
-  final _teamACaptainController = TextEditingController();
-  final _teamBCaptainController = TextEditingController();
 
   final _runsInputCtrl = TextEditingController();
   final _wicketsInputCtrl = TextEditingController();
@@ -257,6 +256,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               builder: (context, snap) {
                 final list = snap.data ?? [];
                 final filtered = _searchQuery.isEmpty ? list : list.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
+                
+                if (filtered.isEmpty) {
+                  return const Center(child: Text("No players added yet. Click 'Add Player' to register.", style: TextStyle(color: Colors.white38, fontSize: 12)));
+                }
+
                 return ListView.builder(
                   itemCount: filtered.length,
                   itemBuilder: (context, idx) {
@@ -1037,7 +1041,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // 🏆 MATCH OVERVIEW WITH TEAM ROUND-BY-ROUND RECORDING
   Widget _buildLiveMatchOverviewCard(TournamentProvider p) {
     final room = p.activeGameRoom;
     if (room == null) return const Center(child: Text("No game session active.", style: TextStyle(color: Colors.white54)));
@@ -1160,7 +1163,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // 🥇 ADAPTIVE WINNER PODIUM (TEAM vs SOLO)
   Widget _buildPodiumVisualizer3DCard(TournamentProvider p) {
     final room = p.activeGameRoom;
     bool isTeam = room?.isTeamGame ?? false;
@@ -1346,6 +1348,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 provider.registerNewPlayerWithRole(_addPlayerNameCtrl.text.trim(), _selectedRoleDraftType, freshPlayerObj);
                 _addPlayerNameCtrl.clear();
                 Navigator.pop(context);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("✅ Added ${_addPlayerNameCtrl.text.trim()}! Saved to Storage."), backgroundColor: Colors.green)
+                );
               },
               child: const Text("Add Player"),
             )
@@ -1355,6 +1361,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // 🏆 SIMPLIFIED CREATION DIALOG (Team 1 & 2 extra fields removed)
   void _showLaunchNewTournamentDialog(BuildContext context, TournamentProvider p) {
     final titleCtrl = TextEditingController();
     final roundsCtrl = TextEditingController(text: "5"); 
@@ -1411,13 +1418,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 if (isTeamMatch) ...[
                   const Divider(color: Colors.white24, height: 24),
-                  TextField(controller: _teamANameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team 1 Custom Name (Default: Team A)")),
-                  const SizedBox(height: 8),
-                  TextField(controller: _teamBNameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team 2 Custom Name (Default: Team B)")),
-                  const SizedBox(height: 8),
-                  TextField(controller: _teamACaptainController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team A Captain Name")),
-                  const SizedBox(height: 8),
-                  TextField(controller: _teamBCaptainController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team B Captain Name")),
+                  TextField(controller: _teamANameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team A Name (Optional)")),
+                  const SizedBox(height: 10),
+                  TextField(controller: _teamBNameController, style: const TextStyle(color: Colors.white), decoration: const InputDecoration(labelText: "Team B Name (Optional)")),
                 ]
               ],
             ),
@@ -1433,15 +1436,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   gameType: "$localSelectedGame ($localSelectedSubFormat)", 
                   maxRounds: manualRoundsParsed,
                   isTeamGame: isTeamMatch,
-                  teamAName: _teamANameController.text.trim().isNotEmpty ? _teamANameController.text.trim() : "Team A", 
-                  teamACaptain: _teamACaptainController.text.trim(),
-                  teamBName: _teamBNameController.text.trim().isNotEmpty ? _teamBNameController.text.trim() : "Team B", 
-                  teamBCaptain: _teamBCaptainController.text.trim(),
+                  teamAName: _teamANameController.text.trim(),
+                  teamBName: _teamBNameController.text.trim(),
                 );
                 _teamANameController.clear();
                 _teamBNameController.clear();
-                _teamACaptainController.clear();
-                _teamBCaptainController.clear();
                 Navigator.pop(context);
               },
               child: const Text("Create"),

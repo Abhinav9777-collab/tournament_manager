@@ -147,6 +147,7 @@ class TournamentProvider with ChangeNotifier {
     _loadDataFromStorage();
   }
 
+  // 💾 Full Disk Restoration (Restores Accounts, Games, Players, AND Roles)
   Future<void> _loadDataFromStorage() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -155,6 +156,8 @@ class TournamentProvider with ChangeNotifier {
       final String? savedDevices = prefs.getString('account_devices_db');
       final String? savedSession = prefs.getString('current_user_session');
       final String? savedRooms = prefs.getString('all_game_rooms_data');
+      final String? savedPlayers = prefs.getString('all_tournament_players');
+      final String? savedRoles = prefs.getString('all_tournament_player_roles');
 
       if (savedDb != null && savedDb.isNotEmpty) {
         final Map<String, dynamic> decoded = jsonDecode(savedDb);
@@ -187,12 +190,39 @@ class TournamentProvider with ChangeNotifier {
         }
       }
 
+      // 🏆 Restore Players List Per Tournament Room
+      if (savedPlayers != null && savedPlayers.isNotEmpty) {
+        final Map<String, dynamic> decodedPlayersMap = jsonDecode(savedPlayers);
+        _tournamentPlayers.clear();
+        decodedPlayersMap.forEach((roomId, playersListJson) {
+          List<PlayerModel> pList = [];
+          for (var pJson in (playersListJson as List)) {
+            pList.add(PlayerModel.fromJson(Map<String, dynamic>.from(pJson)));
+          }
+          _tournamentPlayers[roomId] = pList;
+        });
+      }
+
+      // 🏆 Restore Roles Map
+      if (savedRoles != null && savedRoles.isNotEmpty) {
+        final Map<String, dynamic> decodedRolesMap = jsonDecode(savedRoles);
+        _tournamentPlayerRoles.clear();
+        decodedRolesMap.forEach((roomId, rolesMap) {
+          Map<String, String> innerRoles = {};
+          (rolesMap as Map<String, dynamic>).forEach((pId, role) {
+            innerRoles[pId] = role.toString();
+          });
+          _tournamentPlayerRoles[roomId] = innerRoles;
+        });
+      }
+
       notifyListeners();
     } catch (e) {
-      debugPrint("Local storage data loaded.");
+      debugPrint("Local storage data load error: $e");
     }
   }
 
+  // 💾 Synchronize Everything to Persistent Local Storage
   Future<void> _syncToStorage() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -200,6 +230,16 @@ class TournamentProvider with ChangeNotifier {
       await prefs.setString('account_devices_db', jsonEncode(_accountActiveDevices));
       await prefs.setString('all_game_rooms_data', jsonEncode(_allGameRooms.map((r) => r.toJson()).toList()));
       
+      // Serialize players map
+      Map<String, dynamic> playersToSave = {};
+      _tournamentPlayers.forEach((roomId, pList) {
+        playersToSave[roomId] = pList.map((p) => p.toJson()).toList();
+      });
+      await prefs.setString('all_tournament_players', jsonEncode(playersToSave));
+
+      // Serialize roles map
+      await prefs.setString('all_tournament_player_roles', jsonEncode(_tournamentPlayerRoles));
+
       if (_currentlyLoggedInUser != null) {
         await prefs.setString('current_user_session', jsonEncode({
           'id': _currentlyLoggedInUser!.id,
@@ -210,7 +250,7 @@ class TournamentProvider with ChangeNotifier {
         await prefs.remove('current_user_session');
       }
     } catch (e) {
-      debugPrint("Local storage sync completed.");
+      debugPrint("Local storage sync error: $e");
     }
   }
 
@@ -323,8 +363,8 @@ class TournamentProvider with ChangeNotifier {
     required String gameType, 
     required int maxRounds,
     required bool isTeamGame,
-    String? teamAName, String? teamACaptain,
-    String? teamBName, String? teamBCaptain
+    String? teamAName,
+    String? teamBName,
   }) {
     final roomId = 'room_${DateTime.now().millisecondsSinceEpoch}';
     LocalTeam? tA;
@@ -334,12 +374,12 @@ class TournamentProvider with ChangeNotifier {
       tA = LocalTeam(
         id: 'tm_a_${DateTime.now().millisecondsSinceEpoch}', 
         name: (teamAName != null && teamAName.trim().isNotEmpty) ? teamAName.trim() : 'Team A', 
-        captainName: teamACaptain ?? 'Captain A'
+        captainName: 'Captain A'
       );
       tB = LocalTeam(
         id: 'tm_b_${DateTime.now().millisecondsSinceEpoch}', 
         name: (teamBName != null && teamBName.trim().isNotEmpty) ? teamBName.trim() : 'Team B', 
-        captainName: teamBCaptain ?? 'Captain B'
+        captainName: 'Captain B'
       );
     }
 
