@@ -349,6 +349,28 @@ class TournamentProvider with ChangeNotifier {
     return "SUCCESS";
   }
 
+  // 🔐 DIRECT IN-APP PASSWORD CHANGE METHOD
+  String changeUserPassword(String oldPassword, String newPassword) {
+    if (_currentlyLoggedInUser == null) {
+      return "No user currently logged in.";
+    }
+
+    final username = _currentlyLoggedInUser!.name;
+    if (!_savedAccountsDatabase.containsKey(username)) {
+      return "Account record not found.";
+    }
+
+    final accountData = _savedAccountsDatabase[username]!;
+    if (accountData['password'] != oldPassword.trim()) {
+      return "Incorrect old password. Please try again.";
+    }
+
+    _savedAccountsDatabase[username]!['password'] = newPassword.trim();
+    _syncToStorage();
+    notifyListeners();
+    return "SUCCESS";
+  }
+
   void logoutSessionUser() {
     _currentlyLoggedInUser = null;
     _syncToStorage();
@@ -401,7 +423,6 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 🗑️ DELETE TOURNAMENT
   void deleteTournamentRoom(String roomId) {
     _allGameRooms.removeWhere((r) => r.id == roomId);
     _tournamentPlayers.remove(roomId);
@@ -415,7 +436,6 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 🔄 RESET TOURNAMENT
   void resetTournamentState(String roomId) {
     int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
     if (roomIdx != -1) {

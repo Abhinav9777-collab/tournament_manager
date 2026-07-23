@@ -21,6 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _addPlayerNameCtrl = TextEditingController();
   final _addPlayerEmailCtrl = TextEditingController();
   
+  // Clean Single Controllers for Team Names
   final _teamANameController = TextEditingController();
   final _teamBNameController = TextEditingController();
 
@@ -76,19 +77,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     bool isTablet = screenWidth >= 768 && screenWidth < 1150;
 
     bool isLight = provider.appThemeMode == ThemeMode.light;
-    Color bgColor = isLight ? const Color(0xFFF8FAFC) : const Color(0xFF020308);
+    Color bgColor = isLight ? const Color(0xFFF1F5F9) : const Color(0xFF020308);
+    Color sidebarBg = isLight ? Colors.white : const Color(0xFF060813);
 
     return Scaffold(
       backgroundColor: bgColor,
       appBar: isMobile ? AppBar(
-        backgroundColor: isLight ? const Color(0xFF1E293B) : const Color(0xFF060813),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('TOURNAMENT MANAGER', style: TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: isLight ? Colors.white : const Color(0xFF060813),
+        elevation: 1,
+        iconTheme: IconThemeData(color: isLight ? const Color(0xFF0F172A) : Colors.white),
+        title: Text('TOURNAMENT MANAGER', style: TextStyle(fontSize: 14, color: isLight ? const Color(0xFF0F172A) : Colors.white, fontWeight: FontWeight.bold)),
       ) : null,
       drawer: isMobile ? Drawer(
         child: Container(
-          color: const Color(0xFF060813),
+          color: sidebarBg,
           child: _buildSidebarContentTree(provider, currentUser, isLight),
         ),
       ) : null,
@@ -97,9 +99,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (!isMobile)
             Container(
               width: isTablet ? 220 : 260,
-              decoration: const BoxDecoration(
-                color: Color(0xFF060813),
-                border: Border(right: BorderSide(color: Color(0xFF16192E), width: 1)),
+              decoration: BoxDecoration(
+                color: sidebarBg,
+                border: Border(right: BorderSide(color: isLight ? Colors.black12 : const Color(0xFF16192E), width: 1)),
               ),
               child: _buildSidebarContentTree(provider, currentUser, isLight),
             ),
@@ -126,22 +128,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         const SizedBox(height: 35),
-        _buildSystemLogoBanner(),
+        _buildSystemLogoBanner(isLight),
         const SizedBox(height: 30),
-        _buildSidebarUserSessionCard(currentUser),
+        _buildSidebarUserSessionCard(currentUser, isLight),
         const SizedBox(height: 20),
         
         Expanded(
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             children: [
-              _buildSidebarNavItem(Icons.grid_view_rounded, 'Dashboard'),
-              _buildSidebarNavItem(Icons.sports_esports_rounded, 'Games Library'),
-              _buildSidebarNavItem(Icons.people_outline_rounded, 'Players List'),
-              _buildSidebarNavItem(Icons.tour_rounded, 'My Tournaments'),
-              _buildSidebarNavItem(Icons.emoji_events_rounded, 'Scores & Positions'),
-              _buildSidebarNavItem(Icons.badge_rounded, 'Certificates'),
-              _buildSidebarNavItem(Icons.settings_suggest_rounded, 'Settings'),
+              _buildSidebarNavItem(Icons.grid_view_rounded, 'Dashboard', isLight),
+              _buildSidebarNavItem(Icons.sports_esports_rounded, 'Games Library', isLight),
+              _buildSidebarNavItem(Icons.people_outline_rounded, 'Players List', isLight),
+              _buildSidebarNavItem(Icons.tour_rounded, 'My Tournaments', isLight),
+              _buildSidebarNavItem(Icons.emoji_events_rounded, 'Scores & Positions', isLight),
+              _buildSidebarNavItem(Icons.badge_rounded, 'Certificates', isLight),
+              _buildSidebarNavItem(Icons.settings_suggest_rounded, 'Settings', isLight),
             ],
           ),
         ),
@@ -208,7 +210,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(category.toUpperCase(), style: const TextStyle(color: Color(0xFF00B4D8), fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(category.toUpperCase(), style: const TextStyle(color: Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13)),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 10, runSpacing: 10,
@@ -216,7 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   return Chip(
                     backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E),
                     side: BorderSide(color: borderColor),
-                    label: Text(subFormat, style: TextStyle(color: isLight ? const Color(0xFF1E293B) : Colors.white70, fontSize: 11)),
+                    label: Text(subFormat, style: TextStyle(color: isLight ? const Color(0xFF0F172A) : Colors.white70, fontSize: 11, fontWeight: FontWeight.w600)),
                   );
                 }).toList(),
               )
@@ -229,7 +231,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildPlayersRegistryTabView(TournamentProvider provider, bool isLight) {
     if (provider.activeGameRoomId == null) {
-      return Center(child: Text("Please create or select a tournament first.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
+      return Center(child: Text("Please create or select a tournament first.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontWeight: FontWeight.w600)));
     }
 
     Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
@@ -265,7 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 final filtered = _searchQuery.isEmpty ? list : list.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
                 
                 if (filtered.isEmpty) {
-                  return Center(child: Text("No players added yet. Click 'Add Player' to register.", style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 12)));
+                  return Center(child: Text("No players added yet. Click 'Add Player' to register.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 12, fontWeight: FontWeight.w600)));
                 }
 
                 return ListView.builder(
@@ -277,7 +279,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       contentPadding: EdgeInsets.zero,
                       leading: CircleAvatar(backgroundColor: isLight ? const Color(0xFFCBD5E1) : const Color(0xFF14182E), child: Icon(Icons.person, size: 14, color: isLight ? const Color(0xFF0F172A) : Colors.cyanAccent)),
                       title: Text(p.name, style: TextStyle(color: mainText, fontSize: 13, fontWeight: FontWeight.bold)),
-                      subtitle: Text("Role: $r", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 11)),
+                      subtitle: Text("Role: $r", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 11, fontWeight: FontWeight.w500)),
                       trailing: provider.isMasterEditMode ? IconButton(
                         icon: const Icon(Icons.edit, color: Colors.amber, size: 18),
                         onPressed: () => _showMasterEditPlayerModal(context, provider, provider.activeGameRoomId!, p, isLight),
@@ -295,7 +297,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildTournamentsActiveHubView(TournamentProvider provider, bool isLight) {
     if (provider.allGameRooms.isEmpty) {
-      return Center(child: Text("No tournaments created yet. Click '+ Create Tournament' to start.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
+      return Center(child: Text("No tournaments created yet. Click '+ Create Tournament' to start.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontWeight: FontWeight.w600)));
     }
 
     Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
@@ -318,11 +320,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return Card(
                   color: isMounted ? mountedCardBg : cardBg,
                   margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(side: BorderSide(color: isMounted ? Colors.cyanAccent : (isLight ? Colors.black12 : Colors.transparent))),
+                  shape: RoundedRectangleBorder(side: BorderSide(color: isMounted ? const Color(0xFF0284C7) : (isLight ? Colors.black12 : Colors.transparent))),
                   child: ListTile(
                     leading: const Icon(Icons.hub, color: Colors.purpleAccent),
                     title: Text(t.gameName, style: TextStyle(color: mainText, fontWeight: FontWeight.bold)),
-                    subtitle: Text("Game: ${t.gameType} • Round: ${t.currentRound}/${t.maxRounds} • Status: ${t.liveStatus}", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 11)),
+                    subtitle: Text("Game: ${t.gameType} • Round: ${t.currentRound}/${t.maxRounds} • Status: ${t.liveStatus}", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 11, fontWeight: FontWeight.w500)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -355,7 +357,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildLeaderboardsFunctionalView(TournamentProvider provider, bool isLight) {
     if (provider.activeGameRoomId == null) {
-      return Center(child: Text("No tournament selected. Choose one from 'My Tournaments' tab.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
+      return Center(child: Text("No tournament selected. Choose one from 'My Tournaments' tab.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontWeight: FontWeight.w600)));
     }
     return Container(
       padding: const EdgeInsets.all(12),
@@ -374,13 +376,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
     Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
-    Color rowBg = isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0D0F21);
+    Color rowBg = isLight ? Colors.white : const Color(0xFF0D0F21);
 
     return StreamBuilder<List<PlayerModel>>(
       stream: provider.streamPlayers(),
       builder: (context, snap) {
         final allPlayers = snap.data ?? [];
-        if (allPlayers.isEmpty) return Center(child: Text("No players added to this tournament yet.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
+        if (allPlayers.isEmpty) return Center(child: Text("No players added to this tournament yet.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontWeight: FontWeight.w600)));
         List<PlayerModel> filtered = _searchQuery.isEmpty ? allPlayers : allPlayers.where((p) => p.name.toLowerCase().contains(_searchQuery)).toList();
 
         bool isRankLockActive = allPlayers.any((p) => (p.gameStats[currentId]?['position'] ?? 0) == 0);
@@ -403,7 +405,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Active Game: ${room?.gameName}", style: TextStyle(color: mainText, fontWeight: FontWeight.bold, fontSize: 12)),
-                      Text("Current Round: $currentCompletedRound / $totalConfiguredRounds", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54, fontSize: 10)),
+                      Text("Current Round: $currentCompletedRound / $totalConfiguredRounds", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54, fontSize: 10, fontWeight: FontWeight.w500)),
                     ],
                   ),
                   
@@ -478,7 +480,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     decoration: BoxDecoration(color: rowBg, borderRadius: BorderRadius.circular(12), border: Border.all(color: isLight ? Colors.black12 : Colors.transparent)),
                     child: Row(
                       children: [
-                        Text("#$globalRankPosition", style: const TextStyle(color: Color(0xFF00B4D8), fontWeight: FontWeight.bold)),
+                        Text("#$globalRankPosition", style: const TextStyle(color: Color(0xFF0284C7), fontWeight: FontWeight.bold)),
                         const SizedBox(width: 12),
                         
                         Expanded(
@@ -486,7 +488,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(p.name, style: TextStyle(color: mainText, fontWeight: FontWeight.bold, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                              Text("Role: $userRole", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 10), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text("Role: $userRole", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 10, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
                             ],
                           ),
                         ),
@@ -495,13 +497,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (userRole != 'Bowler Only') Text("R: ${stats['runs'] ?? 0}", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 11)),
+                              if (userRole != 'Bowler Only') Text("R: ${stats['runs'] ?? 0}", style: TextStyle(color: mainText, fontSize: 11, fontWeight: FontWeight.w600)),
                               if (userRole != 'Bowler Only' && userRole != 'Batsman Only') const SizedBox(width: 6),
-                              if (userRole != 'Batsman Only') Text("W: ${stats['wickets'] ?? 0}", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 11)),
+                              if (userRole != 'Batsman Only') Text("W: ${stats['wickets'] ?? 0}", style: TextStyle(color: mainText, fontSize: 11, fontWeight: FontWeight.w600)),
                             ],
                           ),
                           IconButton(
-                            icon: Icon(Icons.edit_note_rounded, color: (roundsLeft > 0 || provider.isMasterEditMode) ? const Color(0xFF00B4D8) : Colors.grey, size: 20),
+                            icon: Icon(Icons.edit_note_rounded, color: (roundsLeft > 0 || provider.isMasterEditMode) ? const Color(0xFF0284C7) : Colors.grey, size: 20),
                             onPressed: (roundsLeft > 0 || provider.isMasterEditMode) ? () {
                               _showModernPerformanceEntryDialog(context, provider, currentId, p.id, userRole, isLight);
                             } : () {
@@ -512,7 +514,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         else ...[
                           DropdownButton<int>(
                             value: (stats['position'] ?? 0) == 0 ? null : stats['position'],
-                            hint: const Text("Assign Rank", style: TextStyle(color: Color(0xFF00B4D8), fontSize: 11)),
+                            hint: const Text("Assign Rank", style: TextStyle(color: Color(0xFF0284C7), fontSize: 11, fontWeight: FontWeight.bold)),
                             dropdownColor: cardBg,
                             underline: const SizedBox(),
                             items: dynamicRankItems.map((int val) {
@@ -569,14 +571,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 controller: _runsInputCtrl,
                 style: TextStyle(color: mainText),
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: "Runs Scored", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54)),
+                decoration: InputDecoration(labelText: "Runs Scored", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54)),
               ),
             if (role != 'Batsman Only')
               TextField(
                 controller: _wicketsInputCtrl,
                 style: TextStyle(color: mainText),
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: "Wickets Taken", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54)),
+                decoration: InputDecoration(labelText: "Wickets Taken", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54)),
               ),
           ],
         ),
@@ -597,12 +599,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildRewardsCertificatesTabView(TournamentProvider provider, bool isLight) {
     if (provider.activeGameRoomId == null) {
-      return Center(child: Text("Please select a tournament first.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
+      return Center(child: Text("Please select a tournament first.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontWeight: FontWeight.w600)));
     }
 
     final allPlayers = provider.sortedPlayers;
     if (allPlayers.isEmpty) {
-      return Center(child: Text("Please add players to this tournament first to calculate the top rank.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38)));
+      return Center(child: Text("Please add players to this tournament first to calculate the top rank.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontWeight: FontWeight.w600)));
     }
 
     final PlayerModel winnerPlayer = allPlayers.first; 
@@ -811,10 +813,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.flash_on_rounded, color: Colors.amber, size: 18),
             title: Text("Master Edit Mode (God Mode)", style: TextStyle(color: mainText, fontSize: 13, fontWeight: FontWeight.bold)),
-            subtitle: Text("Allows direct editing of player names, scores, and rounds at any time", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 10)),
+            subtitle: Text("Allows direct editing of player names, scores, and rounds at any time", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 10, fontWeight: FontWeight.w500)),
             trailing: Switch(
               value: provider.isMasterEditMode,
-              activeColor: Colors.cyanAccent,
+              activeColor: const Color(0xFF0284C7),
               onChanged: (val) {
                 provider.toggleMasterEditMode(val);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -830,7 +832,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.color_lens_rounded, color: Colors.purpleAccent, size: 18),
             title: Text("Dark Theme Mode", style: TextStyle(color: mainText, fontSize: 13, fontWeight: FontWeight.bold)),
-            subtitle: Text("Toggle between Dark and Light mode themes", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 10)),
+            subtitle: Text("Toggle between Dark and Light mode themes", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 10, fontWeight: FontWeight.w500)),
             trailing: Switch(
               value: provider.appThemeMode == ThemeMode.dark,
               activeColor: Colors.purpleAccent,
@@ -932,9 +934,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+            TextField(controller: nameCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
             const SizedBox(height: 10),
-            TextField(controller: scoreCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Total Score Points", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+            TextField(controller: scoreCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Total Score Points", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
           ],
         ),
         actions: [
@@ -972,11 +974,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Game Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+            TextField(controller: nameCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Game Name", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
             const SizedBox(height: 10),
-            TextField(controller: currentRoundCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Current Round", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+            TextField(controller: currentRoundCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Current Round", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
             const SizedBox(height: 10),
-            TextField(controller: maxRoundsCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Max Rounds", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+            TextField(controller: maxRoundsCtrl, keyboardType: TextInputType.number, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Max Rounds", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
           ],
         ),
         actions: [
@@ -1009,7 +1011,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: cardBg,
         title: Text("Change Name", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: TextField(controller: ctrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Full Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+        content: TextField(controller: ctrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Full Name", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -1038,7 +1040,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: cardBg,
         title: Text("Update Username", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: TextField(controller: ctrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Username", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+        content: TextField(controller: ctrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Username", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
         actions: [
           ElevatedButton(
             onPressed: () {
@@ -1054,24 +1056,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // 🔐 DIRECT IN-APP PASSWORD RESET FORM DIALOG
   void _showResetPasswordDialog(TournamentProvider provider, bool isLight) {
+    final oldPassCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+
     Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
     Color mainText = isLight ? const Color(0xFF0F172A) : Colors.white;
+    Color subText = isLight ? const Color(0xFF334155) : Colors.white54;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: cardBg,
-        title: Text("Reset Password", style: TextStyle(color: mainText, fontSize: 14, fontWeight: FontWeight.bold)),
-        content: Text("Click confirm to send password reset instructions to your email.", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 12)),
+        title: Text("Reset Account Password", style: TextStyle(color: mainText, fontSize: 15, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: oldPassCtrl,
+                obscureText: true,
+                style: TextStyle(color: mainText),
+                decoration: InputDecoration(labelText: "Current Old Password", labelStyle: TextStyle(color: subText, fontSize: 12)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newPassCtrl,
+                obscureText: true,
+                style: TextStyle(color: mainText),
+                decoration: InputDecoration(labelText: "New Password", labelStyle: TextStyle(color: subText, fontSize: 12)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmPassCtrl,
+                obscureText: true,
+                style: TextStyle(color: mainText),
+                decoration: InputDecoration(labelText: "Confirm New Password", labelStyle: TextStyle(color: subText, fontSize: 12)),
+              ),
+            ],
+          ),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6C5CE7)),
             onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("🔐 Reset link sent to your email!"), backgroundColor: Colors.purpleAccent));
+              String oldP = oldPassCtrl.text.trim();
+              String newP = newPassCtrl.text.trim();
+              String confP = confirmPassCtrl.text.trim();
+
+              if (oldP.isEmpty || newP.isEmpty || confP.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all password fields!"), backgroundColor: Colors.redAccent));
+                return;
+              }
+
+              if (newP != confP) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("New password and confirm password do not match!"), backgroundColor: Colors.orange));
+                return;
+              }
+
+              String res = provider.changeUserPassword(oldP, newP);
+              if (res == "SUCCESS") {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("🔐 Password changed successfully!"), backgroundColor: Colors.green));
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(res), backgroundColor: Colors.redAccent));
+              }
             },
-            child: const Text("Confirm"),
+            child: const Text("Update Password", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -1089,7 +1143,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(header, style: const TextStyle(color: Color(0xFF00B4D8), fontWeight: FontWeight.bold, fontSize: 13)),
+          Text(header, style: const TextStyle(color: Color(0xFF0284C7), fontWeight: FontWeight.bold, fontSize: 13)),
           Divider(color: borderColor, height: 20),
           ...children
         ],
@@ -1103,9 +1157,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ListTile(
       dense: true,
       contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: isDanger ? Colors.redAccent : (isLight ? Colors.black54 : Colors.white54), size: 16),
-      title: Text(title, style: TextStyle(color: isDanger ? Colors.redAccent : mainText, fontSize: 12)),
-      trailing: trailingWidget ?? (trailingText != null ? Text(trailingText, style: TextStyle(color: isLight ? Colors.black45 : Colors.white30, fontSize: 12)) : Icon(Icons.arrow_forward_ios_rounded, size: 12, color: isLight ? Colors.black26 : Colors.white24)),
+      leading: Icon(icon, color: isDanger ? Colors.redAccent : (isLight ? const Color(0xFF334155) : Colors.white54), size: 16),
+      title: Text(title, style: TextStyle(color: isDanger ? Colors.redAccent : mainText, fontSize: 12, fontWeight: FontWeight.w600)),
+      trailing: trailingWidget ?? (trailingText != null ? Text(trailingText, style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)) : Icon(Icons.arrow_forward_ios_rounded, size: 12, color: isLight ? Colors.black38 : Colors.white24)),
     );
   }
 
@@ -1124,14 +1178,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text(title, style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 9, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(title, style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 9, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)),
               Icon(i, color: color.withOpacity(0.8), size: 12),
             ],
           ),
           const SizedBox(height: 8),
           Text(val, style: TextStyle(color: mainText, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          Text(sub, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(sub, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -1152,7 +1206,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildLiveMatchOverviewCard(TournamentProvider p, bool isLight) {
     final room = p.activeGameRoom;
-    if (room == null) return Center(child: Text("No game session active.", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54)));
+    if (room == null) return Center(child: Text("No game session active.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54, fontWeight: FontWeight.w600)));
 
     Color cardBg = isLight ? Colors.white : const Color(0xFF090B16);
     Color borderColor = isLight ? Colors.black12 : Colors.white10;
@@ -1176,7 +1230,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Text(room.liveStatus == 'COMPLETED' ? "FINISHED" : "LIVE", style: TextStyle(color: room.liveStatus == 'COMPLETED' ? Colors.green : Colors.redAccent, fontSize: 9, fontWeight: FontWeight.bold))
                   ),
                   const SizedBox(width: 8),
-                  Text("${room.gameName} • Round ${room.currentRound} / ${room.maxRounds}", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                  Text("${room.gameName} • Round ${room.currentRound} / ${room.maxRounds}", style: TextStyle(color: mainText, fontSize: 11, fontWeight: FontWeight.bold)),
                 ],
               ),
               Text("Result: ${room.matchOutcome}", style: const TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold))
@@ -1185,7 +1239,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 16),
           
           if (room.isTeamGame) ...[
-            Text("Record Round ${room.currentRound} Outcome:", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54, fontSize: 11)),
+            Text("Record Round ${room.currentRound} Outcome:", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54, fontSize: 11, fontWeight: FontWeight.w500)),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -1194,24 +1248,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                   onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TEAM_A_WIN'),
-                  child: Text("${room.teamA?.name ?? 'Team A'} Won 🏆", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white)),
+                  child: Text("${room.teamA?.name ?? 'Team A'} Won 🏆", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white, fontWeight: FontWeight.bold)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                   onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TIE'),
-                  child: Text("Match Tie 🤝", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white)),
+                  child: Text("Match Tie 🤝", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white, fontWeight: FontWeight.bold)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: isLight ? const Color(0xFFE2E8F0) : const Color(0xFF14182E), padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
                   onPressed: room.liveStatus == 'COMPLETED' ? null : () => p.recordTeamRoundOutcome(room.id, 'TEAM_B_WIN'),
-                  child: Text("${room.teamB?.name ?? 'Team B'} Won 🏆", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white)),
+                  child: Text("${room.teamB?.name ?? 'Team B'} Won 🏆", style: TextStyle(fontSize: 11, color: isLight ? const Color(0xFF0F172A) : Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
 
             if (room.roundHistory.isNotEmpty) ...[
               Divider(color: borderColor, height: 24),
-              const Text("📋 Round-by-Round History:", style: TextStyle(color: Color(0xFF00B4D8), fontSize: 11, fontWeight: FontWeight.bold)),
+              const Text("📋 Round-by-Round History:", style: TextStyle(color: Color(0xFF0284C7), fontSize: 11, fontWeight: FontWeight.bold)),
               const SizedBox(height: 6),
               Column(
                 children: room.roundHistory.map((rec) {
@@ -1219,7 +1273,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(
                       children: [
-                        Text("Round ${rec.roundNumber}: ", style: TextStyle(color: isLight ? Colors.black87 : Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
+                        Text("Round ${rec.roundNumber}: ", style: TextStyle(color: mainText, fontSize: 11, fontWeight: FontWeight.bold)),
                         Text(rec.winningTeamName, style: TextStyle(color: rec.outcome == 'TIE' ? Colors.blue : Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
                       ],
                     ),
@@ -1228,7 +1282,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               )
             ]
           ] else ...[
-            Center(child: Text("Solo match results can be updated in the leaderboard tab.", style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 11))),
+            Center(child: Text("Solo match results can be updated in the leaderboard tab.", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 11, fontWeight: FontWeight.w500))),
           ]
         ],
       ),
@@ -1255,7 +1309,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("App Status", style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 10)),
+                  Text("App Status", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 10, fontWeight: FontWeight.w500)),
                   Text("Connected Live", style: TextStyle(color: mainText, fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               )
@@ -1269,7 +1323,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Top Rank #1", style: TextStyle(color: isLight ? Colors.black45 : Colors.white38, fontSize: 10)),
+                  Text("Top Rank #1", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 10, fontWeight: FontWeight.w500)),
                   Text(p.sortedPlayers.isNotEmpty ? p.sortedPlayers.first.name : "N/A", style: TextStyle(color: mainText, fontSize: 12, fontWeight: FontWeight.bold)),
                 ],
               )
@@ -1331,42 +1385,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12), border: Border.all(color: border)),
       child: TextField(
-        style: TextStyle(color: textColor, fontSize: 13),
-        decoration: InputDecoration(icon: const Icon(Icons.search, color: Color(0xFF00B4D8), size: 18), hintText: "Search player by name...", hintStyle: TextStyle(color: isLight ? Colors.black38 : Colors.white24, fontSize: 12), border: InputBorder.none),
+        style: TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600),
+        decoration: InputDecoration(icon: const Icon(Icons.search, color: Color(0xFF0284C7), size: 18), hintText: "Search player by name...", hintStyle: TextStyle(color: isLight ? const Color(0xFF64748B) : Colors.white24, fontSize: 12), border: InputBorder.none),
         onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
       ),
     );
   }
 
-  Widget _buildSystemLogoBanner() {
-    return const Row(
+  Widget _buildSystemLogoBanner(bool isLight) {
+    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.shield_outlined, color: Colors.cyanAccent, size: 20),
-        SizedBox(width: 8),
-        Text('LEAGUE SYSTEM PRO', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.2)),
+        Icon(Icons.shield_outlined, color: isLight ? const Color(0xFF0284C7) : Colors.cyanAccent, size: 20),
+        const SizedBox(width: 8),
+        Text('LEAGUE SYSTEM PRO', style: TextStyle(color: isLight ? const Color(0xFF0F172A) : Colors.white, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.2)),
       ],
     );
   }
 
-  Widget _buildSidebarUserSessionCard(PlayerModel user) {
+  Widget _buildSidebarUserSessionCard(PlayerModel user, bool isLight) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: const Color(0xFF0F1224), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.cyanAccent.withOpacity(0.15))),
-      child: Text("USER: ${user.name.toUpperCase()}\n[ONLINE LIVE ✓]", style: const TextStyle(color: Colors.greenAccent, fontSize: 9, fontWeight: FontWeight.bold, height: 1.4)),
+      decoration: BoxDecoration(
+        color: isLight ? const Color(0xFFF1F5F9) : const Color(0xFF0F1224), 
+        borderRadius: BorderRadius.circular(14), 
+        border: Border.all(color: isLight ? Colors.black12 : Colors.cyanAccent.withOpacity(0.15))
+      ),
+      child: Text("USER: ${user.name.toUpperCase()}\n[ONLINE LIVE ✓]", style: TextStyle(color: isLight ? Colors.green : Colors.greenAccent, fontSize: 9, fontWeight: FontWeight.bold, height: 1.4)),
     );
   }
 
-  Widget _buildSidebarNavItem(IconData icon, String title) {
+  Widget _buildSidebarNavItem(IconData icon, String title, bool isLight) {
     final bool isSelected = _activeSidebarTab == title;
+    Color selectedBg = isLight ? const Color(0xFFE2E8F0) : Colors.cyanAccent.withOpacity(0.06);
+    Color activeIconColor = isLight ? const Color(0xFF0284C7) : Colors.cyanAccent;
+    Color activeTextColor = isLight ? const Color(0xFF0F172A) : Colors.white;
+    Color inactiveTextColor = isLight ? const Color(0xFF334155) : Colors.white54;
+
     return ListTile(
       dense: true,
       selected: isSelected,
-      selectedTileColor: Colors.cyanAccent.withOpacity(0.06),
+      selectedTileColor: selectedBg,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      leading: Icon(icon, color: isSelected ? Colors.cyanAccent : Colors.white30, size: 16),
-      title: Text(title, style: TextStyle(color: isSelected ? Colors.white : Colors.white54, fontSize: 12)),
+      leading: Icon(icon, color: isSelected ? activeIconColor : (isLight ? Colors.black45 : Colors.white30), size: 16),
+      title: Text(title, style: TextStyle(color: isSelected ? activeTextColor : inactiveTextColor, fontSize: 12, fontWeight: isSelected ? FontWeight.bold : FontWeight.w500)),
       onTap: () {
         setState(() => _activeSidebarTab = title);
         if (Navigator.canPop(context)) Navigator.pop(context); 
@@ -1403,7 +1466,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         Container(
           constraints: const BoxConstraints(maxWidth: 80),
-          child: Text(player, style: TextStyle(color: isLight ? const Color(0xFF0F172A) : Colors.white, fontSize: 10), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+          child: Text(player, style: TextStyle(color: isLight ? const Color(0xFF0F172A) : Colors.white, fontSize: 10, fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
         ),
         const SizedBox(height: 4),
         Container(
@@ -1437,10 +1500,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               TextField(
                 controller: _addPlayerNameCtrl, 
                 style: TextStyle(color: mainText), 
-                decoration: InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))
+                decoration: InputDecoration(labelText: "Player Name", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))
               ),
               const SizedBox(height: 20),
-              Text("Select Player Role:", style: TextStyle(color: isLight ? Colors.black54 : Colors.white54, fontSize: 11)),
+              Text("Select Player Role:", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54, fontSize: 11, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Container(
                 width: double.infinity,
@@ -1450,7 +1513,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: DropdownButton<String>(
                     value: _selectedRoleDraftType,
                     dropdownColor: cardBg,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF00B4D8)),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF0284C7)),
                     items: dynamicRoles.map((String choice) {
                       return DropdownMenuItem<String>(value: choice, child: Text(choice, style: TextStyle(color: mainText, fontSize: 13, fontWeight: FontWeight.bold)));
                     }).toList(),
@@ -1513,16 +1576,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(controller: titleCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Tournament Name", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+                TextField(controller: titleCtrl, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Tournament Name", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
                 const SizedBox(height: 16),
                 TextField(
                   controller: roundsCtrl, 
                   style: TextStyle(color: mainText), 
                   keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: "Total Rounds", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54)),
+                  decoration: InputDecoration(labelText: "Total Rounds", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54)),
                 ),
                 const SizedBox(height: 16),
-                Text("Select Sport", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 11)),
+                Text("Select Sport", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 11, fontWeight: FontWeight.w600)),
                 DropdownButton<String>(
                   value: localSelectedGame,
                   isExpanded: true,
@@ -1539,7 +1602,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                Text("Select Format", style: TextStyle(color: isLight ? Colors.black54 : Colors.white38, fontSize: 11)),
+                Text("Select Format", style: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white38, fontSize: 11, fontWeight: FontWeight.w600)),
                 DropdownButton<String>(
                   value: localSelectedSubFormat,
                   isExpanded: true,
@@ -1551,9 +1614,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 if (isTeamMatch) ...[
                   Divider(color: isLight ? Colors.black12 : Colors.white24, height: 24),
-                  TextField(controller: _teamANameController, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Team A Name (Optional)", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+                  TextField(controller: _teamANameController, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Team A Name (Optional)", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
                   const SizedBox(height: 10),
-                  TextField(controller: _teamBNameController, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Team B Name (Optional)", labelStyle: TextStyle(color: isLight ? Colors.black54 : Colors.white54))),
+                  TextField(controller: _teamBNameController, style: TextStyle(color: mainText), decoration: InputDecoration(labelText: "Team B Name (Optional)", labelStyle: TextStyle(color: isLight ? const Color(0xFF334155) : Colors.white54))),
                 ]
               ],
             ),
