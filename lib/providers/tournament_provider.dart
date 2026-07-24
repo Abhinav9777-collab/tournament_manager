@@ -7,9 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 // 🚀 Relative path for PlayerModel
 import '../../models/player_model.dart';
 
-// 🚀 Universal Web Helper Imports
-import 'package:web/web.dart' as web;
-import 'dart:js_interop';
+// 🚀 Universal Download Helper (Android APK & Web Compatible)
+import '../utils/download_helper.dart';
 
 class LocalTeam {
   final String id;
@@ -423,6 +422,7 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // 🗑️ DELETE TOURNAMENT
   void deleteTournamentRoom(String roomId) {
     _allGameRooms.removeWhere((r) => r.id == roomId);
     _tournamentPlayers.remove(roomId);
@@ -436,6 +436,7 @@ class TournamentProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // 🔄 RESET TOURNAMENT
   void resetTournamentState(String roomId) {
     int roomIdx = _allGameRooms.indexWhere((r) => r.id == roomId);
     if (roomIdx != -1) {
@@ -612,7 +613,7 @@ class TournamentProvider with ChangeNotifier {
     }
   }
 
-  // 📜 100% UI-IDENTICAL SVG CERTIFICATE DOWNLOADER (WEB + MOBILE SAFE)
+  // 📜 100% UI-IDENTICAL SVG CERTIFICATE DOWNLOADER (ANDROID & WEB SAFE)
   void downloadWinnerCertificate(String winnerName, String gameName, int score) {
     try {
       final String currentDate = DateTime.now().toString().split(' ')[0];
@@ -674,19 +675,7 @@ class TournamentProvider with ChangeNotifier {
         <path d="M390 466 L393 475 L402 475 L395 481 L397 490 L390 484 L383 490 L385 481 L378 475 L387 475 Z" fill="#D4AF37"/>
       </svg>''';
 
-      if (kIsWeb) {
-        final bytes = utf8.encode(svgContent);
-        final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: 'image/svg+xml'));
-        final url = web.URL.createObjectURL(blob);
-        
-        final anchor = web.document.createElement('a') as web.HTMLAnchorElement;
-        anchor.href = url;
-        anchor.download = '${winnerName}_Winner_Certificate.svg';
-        anchor.click();
-        web.URL.revokeObjectURL(url);
-      } else {
-        debugPrint("Certificate Generated for Mobile App: ${winnerName}_Winner_Certificate.svg");
-      }
+      downloadFile(svgContent, '${winnerName}_Winner_Certificate.svg');
     } catch (e) {
       debugPrint("Certificate download error: $e");
     }
