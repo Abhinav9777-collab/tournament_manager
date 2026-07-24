@@ -1,0 +1,8 @@
+[build]
+  publish = "build/web"
+  command = "if [ -d flutter ]; then cd flutter && git pull && cd ..; else git clone https://github.com/flutter/flutter.git -b stable; fi && export PATH=\"$PATH:`pwd`/flutter/bin\" && flutter doctor && flutter build web --release"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
