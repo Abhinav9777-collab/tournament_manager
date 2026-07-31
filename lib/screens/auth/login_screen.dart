@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import '../../providers/tournament_provider.dart';
-import '../../services/email_service.dart'; // 🚀 Direct EmailJS Service
+import '../../services/email_service.dart'; // 🚀 Direct Google Apps Script Email Service
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -44,6 +44,17 @@ class _LoginScreenState extends State<LoginScreen> {
     _evaluatePersistentSessionState();
   }
 
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    _fullNameController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
+
   void _evaluatePersistentSessionState() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<TournamentProvider>(context, listen: false);
@@ -61,13 +72,15 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining > 0) {
-        setState(() => _secondsRemaining--);
+        if (mounted) setState(() => _secondsRemaining--);
       } else {
         _countdownTimer?.cancel();
-        setState(() {
-          _isOtpSent = false;
-          _statusFeedbackMessage = "OTP expired. Please click 'Resend OTP'.";
-        });
+        if (mounted) {
+          setState(() {
+            _isOtpSent = false;
+            _statusFeedbackMessage = "OTP expired. Please click 'Resend OTP'.";
+          });
+        }
       }
     });
   }
@@ -79,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // =========================================================================
-  // 🚀 DIRECT EMAILJS GMAIL OTP PIPELINE (SERVERLESS & 100% RELIABLE)
+  // 🚀 DIRECT GMAIL OTP PIPELINE VIA GOOGLE APPS SCRIPT (FREE & UNLIMITED)
   // =========================================================================
   Future<void> _handleOtpGenerationRequest() async {
     final email = _emailController.text.trim();
@@ -101,19 +114,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Direct EmailJS Call
+      // Direct Call to Google Apps Script via EmailOtpService
       bool success = await EmailOtpService.sendOtp(email, name);
 
-      if (success) {
-        _startOtpTimer();
-        setState(() => _statusFeedbackMessage = "SUCCESS: OTP sent to $email. Check your inbox!");
-      } else {
-        setState(() => _statusFeedbackMessage = "Failed to send OTP. Please try again.");
+      if (mounted) {
+        if (success) {
+          _startOtpTimer();
+          setState(() => _statusFeedbackMessage = "SUCCESS: OTP sent to $email. Check your inbox!");
+        } else {
+          setState(() => _statusFeedbackMessage = "Failed to send OTP. Please check your network connection.");
+        }
       }
     } catch (e) {
-      setState(() => _statusFeedbackMessage = "Network error while triggering email.");
+      if (mounted) {
+        setState(() => _statusFeedbackMessage = "Network error while triggering email.");
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

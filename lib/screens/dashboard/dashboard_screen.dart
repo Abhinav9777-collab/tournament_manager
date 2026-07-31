@@ -28,6 +28,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final _runsInputCtrl = TextEditingController();
   final _wicketsInputCtrl = TextEditingController();
 
+  @override
+  void dispose() {
+    _addPlayerNameCtrl.dispose();
+    _addPlayerEmailCtrl.dispose();
+    _teamANameController.dispose();
+    _teamBNameController.dispose();
+    _runsInputCtrl.dispose();
+    _wicketsInputCtrl.dispose();
+    super.dispose();
+  }
+
   final Map<String, List<String>> _gameFormatsDatabase = {
     'Cricket': ['T10 Cricket', 'T20 Cricket', 'ODI Cricket', 'Test Cricket', 'Box Cricket', 'Tennis Ball Cricket', 'Gully Cricket'],
     'Football': ['Football', 'Futsal', 'Five-a-Side Football', 'Seven-a-Side Football'],
@@ -1530,21 +1541,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           actions: [
             ElevatedButton(
               onPressed: () {
-                if (_addPlayerNameCtrl.text.trim().isEmpty) return;
+                final String playerName = _addPlayerNameCtrl.text.trim();
+                if (playerName.isEmpty) return;
                 
                 final freshPlayerObj = PlayerModel(
                   id: 'plr_${DateTime.now().millisecondsSinceEpoch}',
-                  name: _addPlayerNameCtrl.text.trim(),
-                  email: '${_addPlayerNameCtrl.text.trim().toLowerCase()}@app.io',
+                  name: playerName,
+                  email: '${playerName.toLowerCase()}@app.io',
                   tournamentScores: {provider.activeGameRoomId!: 0}
                 );
 
-                provider.registerNewPlayerWithRole(_addPlayerNameCtrl.text.trim(), _selectedRoleDraftType, freshPlayerObj);
+                provider.registerNewPlayerWithRole(playerName, _selectedRoleDraftType, freshPlayerObj);
                 _addPlayerNameCtrl.clear();
                 Navigator.pop(context);
                 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("✅ Added ${_addPlayerNameCtrl.text.trim()}! Saved to Storage."), backgroundColor: Colors.green)
+                  SnackBar(content: Text("✅ Added $playerName! Saved to Storage."), backgroundColor: Colors.green)
                 );
               },
               child: const Text("Add Player"),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/tournament_provider.dart';
-import '../../services/email_service.dart'; // 🚀 EmailJS Service Import
+import '../../services/email_service.dart'; // 🚀 Google Apps Script Email Service Import
 
 class SignupScreen extends StatefulWidget {
   final VoidCallback onSignupSuccess;
@@ -26,7 +26,7 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isOtpSent = false;
   bool _isEmailVerified = false;
 
-  // 📩 Step 1: Send Live Gmail OTP via EmailJS
+  // 📩 Step 1: Send Live Gmail OTP via Google Apps Script
   Future<void> _handleSendOtp() async {
     final email = _emailController.text.trim();
     final name = _usernameController.text.trim();
@@ -42,18 +42,22 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => _isSendingOtp = true);
 
-    // Call EmailJS
+    // Call Google Apps Script Service
     bool success = await EmailOtpService.sendOtp(email, name);
 
-    setState(() {
-      _isSendingOtp = false;
-      if (success) _isOtpSent = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isSendingOtp = false;
+        if (success) {
+          _isOtpSent = true;
+        }
+      });
 
-    if (success) {
-      _showSnackBar("✅ OTP sent successfully to $email! Check Inbox/Spam.", Colors.green);
-    } else {
-      _showSnackBar("❌ Failed to send OTP. Please check internet/credentials.", Colors.redAccent);
+      if (success) {
+        _showSnackBar("✅ OTP sent successfully to $email! Check Inbox/Spam.", Colors.green);
+      } else {
+        _showSnackBar("❌ Failed to send OTP. Please check internet/Google Script URL.", Colors.redAccent);
+      }
     }
   }
 
