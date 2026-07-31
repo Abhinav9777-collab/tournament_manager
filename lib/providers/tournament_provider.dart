@@ -684,7 +684,7 @@ class TournamentProvider with ChangeNotifier {
 
         <!-- Game Name & Points -->
         <text x="390" y="335" fill="#0B1B3D" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="1">${gameName.toUpperCase()}</text>
-        <line x1="230" y1="345" x2="550" y2="545" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
+        <line x1="230" y1="345" x2="550" y2="345" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
         <text x="390" y="375" fill="#10B981" font-size="16" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.5">SCORE: $score PTS</text>
 
         <!-- Dedication Note -->
