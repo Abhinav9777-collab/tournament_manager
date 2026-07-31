@@ -3,44 +3,41 @@ import 'dart:math';
 import 'package:http/http.dart' as http;
 
 class EmailOtpService {
-  static const String serviceId = 'service_mckgkau';
-  static const String templateId = 'template_8a5pzan';
-  static const String publicKey = 'JSGH77XiaTbGTGVV8';
+  // 🚀 Google Apps Script Web App URL for Unlimited Free Email OTPs
+  static const String googleScriptUrl = 
+      'https://script.google.com/macros/s/AKfycbyDq4d8TALsyRYfoBK803t_MDfZ_pTxfK5yaWm-b7uiVqSTDKNaJW4UORUAqOf2ikSh/exec';
 
   static String activeOtp = '';
 
-  // 🚀 Direct Email Sending Function
+  // 🚀 Direct Unlimited Free Email Sending Function
   static Future<bool> sendOtp(String targetEmail, String userName) async {
-    // Generate 6 digit random OTP
+    // Generate 6-digit random OTP
     activeOtp = (Random().nextInt(900000) + 100000).toString();
-
-    final url = Uri.parse('https://api.emailjs.com/api/v1.0/email/send');
 
     try {
       final response = await http.post(
-        url,
+        Uri.parse(googleScriptUrl),
         headers: {
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'service_id': serviceId,
-          'template_id': templateId,
-          'user_id': publicKey,
-          'template_params': {
-            'to_email': targetEmail,
-            'user_email': targetEmail,
-            'to_name': userName,
-            'passcode': activeOtp,
-            'otp_code': activeOtp,
-          }
+          'email': targetEmail.trim(),
+          'otp': activeOtp,
+          'name': userName.trim(),
         }),
       );
 
       if (response.statusCode == 200) {
-        print("✅ EmailJS OTP sent successfully to $targetEmail");
-        return true;
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        if (responseData['status'] == 'SUCCESS') {
+          print("✅ Google Apps Script OTP sent successfully to $targetEmail");
+          return true;
+        } else {
+          print("❌ Script Error: ${responseData['message']}");
+          return false;
+        }
       } else {
-        print("❌ EmailJS Error: ${response.body}");
+        print("❌ HTTP Error: Status Code ${response.statusCode}");
         return false;
       }
     } catch (e) {

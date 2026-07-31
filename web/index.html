@@ -12,8 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="tournament_manager">
   
-  <!-- Screen cutting prevent karne ke liye perfect viewport settings -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
@@ -30,21 +29,26 @@
       background-color: #03040B; /* Strict application surface match */
       width: 100%;
       height: 100%;
-      overflow: hidden; /* Scrollbars aur extra overflow cutting rokne ke liye */
     }
   </style>
 </head>
 <body>
-  <!-- 🏆 MODERN FLUTTER WEB BOOTSTRAP INITIALIZATION -->
+  <!-- 🏆 THE 100% BLACK SCREEN CURE FOR NEW BOOTSTRAP GENERATIONS -->
   <script>
     window.addEventListener('load', function(ev) {
+      // Direct integration configuration to prevent graphics pipeline locks
       if (window._flutter && window._flutter.loader) {
-        window._flutter.loader.load({
-          config: {
-            renderer: "html" // Safe rendering engine forced
+        window._flutter.loader.loadEntrypoint({
+          onEntrypointLoaded: function(engineInitializer) {
+            engineInitializer.initializeEngine({
+              renderer: "html" // Safe rendering engine forced
+            }).then(function(appRunner) {
+              appRunner.runApp();
+            });
           }
         });
       } else {
+        // Fallback injection block if loader pipeline delays
         window.flutterConfiguration = {
           renderer: "html"
         };

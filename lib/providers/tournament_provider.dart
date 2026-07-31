@@ -147,6 +147,9 @@ class TournamentProvider with ChangeNotifier {
     _loadDataFromStorage();
   }
 
+  // 🔑 Get User-Specific Key Prefix for Clean Isolation
+  String get _userPrefix => _currentlyLoggedInUser != null ? "${_currentlyLoggedInUser!.id}_" : "guest_";
+
   // 💾 Full Storage Restoration
   Future<void> _loadDataFromStorage() async {
     try {
@@ -155,9 +158,6 @@ class TournamentProvider with ChangeNotifier {
       final String? savedDb = prefs.getString('saved_accounts_db');
       final String? savedDevices = prefs.getString('account_devices_db');
       final String? savedSession = prefs.getString('current_user_session');
-      final String? savedRooms = prefs.getString('all_game_rooms_data');
-      final String? savedPlayers = prefs.getString('all_tournament_players');
-      final String? savedRoles = prefs.getString('all_tournament_player_roles');
 
       if (savedDb != null && savedDb.isNotEmpty) {
         final Map<String, dynamic> decoded = jsonDecode(savedDb);
@@ -179,40 +179,8 @@ class TournamentProvider with ChangeNotifier {
         );
       }
 
-      if (savedRooms != null && savedRooms.isNotEmpty) {
-        final List decodedRooms = jsonDecode(savedRooms);
-        _allGameRooms.clear();
-        for (var r in decodedRooms) {
-          _allGameRooms.add(LocalGameModel.fromJson(r));
-        }
-        if (_allGameRooms.isNotEmpty) {
-          _activeGameRoomId = _allGameRooms.first.id;
-        }
-      }
-
-      if (savedPlayers != null && savedPlayers.isNotEmpty) {
-        final Map<String, dynamic> decodedPlayersMap = jsonDecode(savedPlayers);
-        _tournamentPlayers.clear();
-        decodedPlayersMap.forEach((roomId, playersListJson) {
-          List<PlayerModel> pList = [];
-          for (var pJson in (playersListJson as List)) {
-            pList.add(PlayerModel.fromJson(Map<String, dynamic>.from(pJson)));
-          }
-          _tournamentPlayers[roomId] = pList;
-        });
-      }
-
-      if (savedRoles != null && savedRoles.isNotEmpty) {
-        final Map<String, dynamic> decodedRolesMap = jsonDecode(savedRoles);
-        _tournamentPlayerRoles.clear();
-        decodedRolesMap.forEach((roomId, rolesMap) {
-          Map<String, String> innerRoles = {};
-          (rolesMap as Map<String, dynamic>).forEach((pId, role) {
-            innerRoles[pId] = role.toString();
-          });
-          _tournamentPlayerRoles[roomId] = innerRoles;
-        });
-      }
+      // Load user isolated data
+      await _loadUserIsolatedData();
 
       notifyListeners();
     } catch (e) {
@@ -220,21 +188,59 @@ class TournamentProvider with ChangeNotifier {
     }
   }
 
-  // 💾 Synchronize Everything to Persistent Local Storage
+  // 🔒 Load Data specific to Currently Logged-in User
+  Future<void> _loadUserIsolatedData() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String prefix = _userPrefix;
+
+    final String? savedRooms = prefs.getString('${prefix}all_game_rooms_data');
+    final String? savedPlayers = prefs.getString('${prefix}all_tournament_players');
+    final String? savedRoles = prefs.getString('${prefix}all_tournament_player_roles');
+
+    _allGameRooms.clear();
+    _tournamentPlayers.clear();
+    _tournamentPlayerRoles.clear();
+    _activeGameRoomId = null;
+
+    if (savedRooms != null && savedRooms.isNotEmpty) {
+      final List decodedRooms = jsonDecode(savedRooms);
+      for (var r in decodedRooms) {
+        _allGameRooms.add(LocalGameModel.fromJson(r));
+      }
+      if (_allGameRooms.isNotEmpty) {
+        _activeGameRoomId = _allGameRooms.first.id;
+      }
+    }
+
+    if (savedPlayers != null && savedPlayers.isNotEmpty) {
+      final Map<String, dynamic> decodedPlayersMap = jsonDecode(savedPlayers);
+      decodedPlayersMap.forEach((roomId, playersListJson) {
+        List<PlayerModel> pList = [];
+        for (var pJson in (playersListJson as List)) {
+          pList.add(PlayerModel.fromJson(Map<String, dynamic>.from(pJson)));
+        }
+        _tournamentPlayers[roomId] = pList;
+      });
+    }
+
+    if (savedRoles != null && savedRoles.isNotEmpty) {
+      final Map<String, dynamic> decodedRolesMap = jsonDecode(savedRoles);
+      decodedRolesMap.forEach((roomId, rolesMap) {
+        Map<String, String> innerRoles = {};
+        (rolesMap as Map<String, dynamic>).forEach((pId, role) {
+          innerRoles[pId] = role.toString();
+        });
+        _tournamentPlayerRoles[roomId] = innerRoles;
+      });
+    }
+  }
+
+  // 💾 Synchronize Everything to Persistent Local Storage with User-Isolation
   Future<void> _syncToStorage() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('saved_accounts_db', jsonEncode(_savedAccountsDatabase));
       await prefs.setString('account_devices_db', jsonEncode(_accountActiveDevices));
-      await prefs.setString('all_game_rooms_data', jsonEncode(_allGameRooms.map((r) => r.toJson()).toList()));
-      
-      Map<String, dynamic> playersToSave = {};
-      _tournamentPlayers.forEach((roomId, pList) {
-        playersToSave[roomId] = pList.map((p) => p.toJson()).toList();
-      });
-      await prefs.setString('all_tournament_players', jsonEncode(playersToSave));
-
-      await prefs.setString('all_tournament_player_roles', jsonEncode(_tournamentPlayerRoles));
 
       if (_currentlyLoggedInUser != null) {
         await prefs.setString('current_user_session', jsonEncode({
@@ -245,6 +251,18 @@ class TournamentProvider with ChangeNotifier {
       } else {
         await prefs.remove('current_user_session');
       }
+
+      // Save User-Isolated Data
+      final String prefix = _userPrefix;
+      await prefs.setString('${prefix}all_game_rooms_data', jsonEncode(_allGameRooms.map((r) => r.toJson()).toList()));
+      
+      Map<String, dynamic> playersToSave = {};
+      _tournamentPlayers.forEach((roomId, pList) {
+        playersToSave[roomId] = pList.map((p) => p.toJson()).toList();
+      });
+      await prefs.setString('${prefix}all_tournament_players', jsonEncode(playersToSave));
+      await prefs.setString('${prefix}all_tournament_player_roles', jsonEncode(_tournamentPlayerRoles));
+
     } catch (e) {
       debugPrint("Local storage sync error: $e");
     }
@@ -343,6 +361,9 @@ class TournamentProvider with ChangeNotifier {
       tournamentScores: {}
     );
     
+    // Load new user's isolated data dynamically
+    _loadUserIsolatedData();
+
     _syncToStorage();
     notifyListeners();
     return "SUCCESS";
@@ -372,6 +393,11 @@ class TournamentProvider with ChangeNotifier {
 
   void logoutSessionUser() {
     _currentlyLoggedInUser = null;
+    _allGameRooms.clear();
+    _tournamentPlayers.clear();
+    _tournamentPlayerRoles.clear();
+    _activeGameRoomId = null;
+
     _syncToStorage();
     notifyListeners();
   }
@@ -658,7 +684,7 @@ class TournamentProvider with ChangeNotifier {
 
         <!-- Game Name & Points -->
         <text x="390" y="335" fill="#0B1B3D" font-size="18" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="1">${gameName.toUpperCase()}</text>
-        <line x1="230" y1="345" x2="550" y2="345" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
+        <line x1="230" y1="345" x2="550" y2="545" stroke="#D4AF37" stroke-width="1" opacity="0.5"/>
         <text x="390" y="375" fill="#10B981" font-size="16" font-family="sans-serif" font-weight="bold" text-anchor="middle" letter-spacing="0.5">SCORE: $score PTS</text>
 
         <!-- Dedication Note -->
