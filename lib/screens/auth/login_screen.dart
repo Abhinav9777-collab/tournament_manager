@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
 import 'dart:math' as math;
 import '../../providers/tournament_provider.dart';
-import '../../services/email_service.dart'; // 🚀 Direct Google Apps Script Email Service
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -21,22 +19,15 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   String _currentFormState = 'LOGIN'; // 'LOGIN' or 'SIGNUP'
-  bool _isLoading = false;
   bool _isPasswordObscured = true;
+  bool _isConfirmPasswordObscured = true;
   String _statusFeedbackMessage = '';
 
-  // ⏱️ OTP Timer and Gate Verification States
-  bool _isOtpVerified = false; 
-  bool _isOtpSent = false;
-  int _secondsRemaining = 60; 
-  Timer? _countdownTimer;
-
   // Controllers Matrix
-  final _fullNameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _otpController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -46,12 +37,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _countdownTimer?.cancel();
-    _fullNameController.dispose();
     _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _otpController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -64,105 +53,30 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  void _startOtpTimer() {
-    _countdownTimer?.cancel();
-    setState(() {
-      _secondsRemaining = 60;
-      _isOtpSent = true;
-    });
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemaining > 0) {
-        if (mounted) setState(() => _secondsRemaining--);
-      } else {
-        _countdownTimer?.cancel();
-        if (mounted) {
-          setState(() {
-            _isOtpSent = false;
-            _statusFeedbackMessage = "OTP expired. Please click 'Resend OTP'.";
-          });
-        }
-      }
-    });
-  }
-
-  String _formatTimerText() {
-    int minutes = _secondsRemaining ~/ 60;
-    int seconds = _secondsRemaining % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  // =========================================================================
-  // 🚀 DIRECT GMAIL OTP PIPELINE VIA GOOGLE APPS SCRIPT (FREE & UNLIMITED)
-  // =========================================================================
-  Future<void> _handleOtpGenerationRequest() async {
+  // 🚀 Direct Fraud-Proof Registration Call
+  void _handleDirectSignup(TournamentProvider provider) {
+    final user = _usernameController.text.trim();
     final email = _emailController.text.trim();
-    final name = _usernameController.text.trim();
+    final pass = _passwordController.text.trim();
+    final confirmPass = _confirmPasswordController.text.trim();
 
-    if (name.isEmpty) {
-      setState(() => _statusFeedbackMessage = "Please enter your Name or Username first.");
+    if (user.isEmpty || email.isEmpty || pass.isEmpty || confirmPass.isEmpty) {
+      setState(() => _statusFeedbackMessage = "All fields are required.");
       return;
     }
 
-    if (email.isEmpty || !email.contains('@')) {
+    if (!email.contains('@')) {
       setState(() => _statusFeedbackMessage = "Please enter a valid email address.");
       return;
     }
 
-    setState(() { 
-      _isLoading = true; 
-      _statusFeedbackMessage = 'Sending OTP to your email...'; 
-    });
-
-    try {
-      // Direct Call to Google Apps Script via EmailOtpService
-      bool success = await EmailOtpService.sendOtp(email, name);
-
-      if (mounted) {
-        if (success) {
-          _startOtpTimer();
-          setState(() => _statusFeedbackMessage = "SUCCESS: OTP sent to $email. Check your inbox!");
-        } else {
-          setState(() => _statusFeedbackMessage = "Failed to send OTP. Please check your network connection.");
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _statusFeedbackMessage = "Network error while triggering email.");
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  void _verifyOtpCodeLive() {
-    final email = _emailController.text.trim();
-    final otp = _otpController.text.trim();
-
-    if (otp.isEmpty || email.isEmpty) {
-      setState(() => _statusFeedbackMessage = "Please fill in both Email and OTP fields.");
+    if (pass.length < 6) {
+      setState(() => _statusFeedbackMessage = "Password must be at least 6 characters long.");
       return;
     }
 
-    if (EmailOtpService.verifyOtp(otp)) {
-      _countdownTimer?.cancel();
-      setState(() {
-        _isOtpVerified = true;
-        _statusFeedbackMessage = "SUCCESS: Email Verified! Now set your password.";
-      });
-    } else {
-      setState(() => _statusFeedbackMessage = "Invalid or expired OTP code.");
-    }
-  }
-
-  void _handleAccountCommitment(TournamentProvider provider) {
-    final user = _usernameController.text.trim();
-    final email = _emailController.text.trim();
-    final pass = _passwordController.text.trim();
-
-    if (user.isEmpty || email.isEmpty || pass.isEmpty || !_isOtpVerified) {
-      setState(() => _statusFeedbackMessage = "All fields are required and OTP must be verified.");
+    if (pass != confirmPass) {
+      setState(() => _statusFeedbackMessage = "Passwords do not match.");
       return;
     }
 
@@ -180,10 +94,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  // 🔐 Direct Standard Password Login Call
   void _executeStandardLogin(TournamentProvider provider) {
     final user = _usernameController.text.trim();
     final pass = _passwordController.text.trim();
-    
+
     if (user.isEmpty || pass.isEmpty) {
       setState(() => _statusFeedbackMessage = "Username and Password fields cannot be blank.");
       return;
@@ -191,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     String deviceTag = "WEB_BROWSER_SESSION";
     String result = provider.loginUser(user, pass, deviceTag);
-    
+
     if (result == "SUCCESS") {
       widget.onLoginSuccess();
     } else {
@@ -208,12 +123,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF03040B), 
+      backgroundColor: const Color(0xFF03040B),
       body: Stack(
         children: [
           Positioned.fill(child: CustomPaint(painter: CyberPremiumBackgroundPainter())),
           Positioned(
-            left: -80, top: 140,
+            left: -80,
+            top: 140,
             child: Opacity(opacity: 0.04, child: Icon(Icons.shield_outlined, size: 360, color: Colors.purpleAccent.shade400)),
           ),
           Center(
@@ -228,14 +144,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: 440,
                     padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF090C15).withOpacity(0.96), 
+                      color: const Color(0xFF090C15).withOpacity(0.96),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Colors.white.withOpacity(0.04), width: 1.2),
                     ),
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      child: _currentFormState == 'LOGIN' 
-                          ? _buildLoginViewPanel(provider) 
+                      child: _currentFormState == 'LOGIN'
+                          ? _buildLoginViewPanel(provider)
                           : _buildSignupViewPanel(provider),
                     ),
                   ),
@@ -265,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     TextSpan(text: "Welcome ", style: TextStyle(color: Colors.white)),
                     TextSpan(text: "Back!", style: TextStyle(color: Color(0xFF8A56FA))),
-                  ]
+                  ],
                 ),
               ),
               const SizedBox(height: 8),
@@ -284,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
           suffix: IconButton(
             icon: Icon(_isPasswordObscured ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white30, size: 16),
             onPressed: () => setState(() => _isPasswordObscured = !_isPasswordObscured),
-          )
+          ),
         ),
         const SizedBox(height: 14),
         _buildDynamicFeedbackLabel(),
@@ -322,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     TextSpan(text: "Create Your ", style: TextStyle(color: Colors.white)),
                     TextSpan(text: "Account", style: TextStyle(color: Color(0xFF8A56FA))),
-                  ]
+                  ],
                 ),
               ),
               const SizedBox(height: 8),
@@ -333,74 +249,39 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 32),
-        
+
         _buildInputSectionLabel("Full Name / Username Selection"),
-        _buildCustomFormInput(_usernameController, Icons.person_rounded, "Enter your chosen username handle", _isOtpVerified, isPasswordField: false),
+        _buildCustomFormInput(_usernameController, Icons.person_rounded, "Choose a unique username", false, isPasswordField: false),
         const SizedBox(height: 18),
-        
+
         _buildInputSectionLabel("Email Address"),
-        _buildCustomFormInput(_emailController, Icons.email_rounded, "Enter your email address", _isOtpVerified, isPasswordField: false),
+        _buildCustomFormInput(_emailController, Icons.email_rounded, "Enter your email address", false, isPasswordField: false),
         const SizedBox(height: 18),
-        
-        _buildInputSectionLabel("OTP Verification"),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _buildCustomFormInput(_otpController, Icons.verified_user_rounded, "Enter OTP Code", _isOtpVerified, isPasswordField: false,
-                suffix: _isOtpSent && !_isOtpVerified 
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 14, right: 10),
-                        child: Text(_formatTimerText(), style: const TextStyle(color: Colors.amber, fontSize: 11, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
-                      )
-                    : null,
-              ),
-            ),
-            const SizedBox(width: 12),
-            if (!_isOtpVerified)
-              Container(
-                height: 46,
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF8A56FA).withOpacity(0.4)),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: TextButton(
-                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 14)),
-                  onPressed: _isLoading ? null : (_isOtpSent ? _verifyOtpCodeLive : _handleOtpGenerationRequest),
-                  child: Text(_isLoading ? "Sending..." : (_isOtpSent ? "Verify OTP" : "Send OTP"), style: const TextStyle(color: Color(0xFF8A56FA), fontSize: 12, fontWeight: FontWeight.bold)),
-                ),
-              )
-            else
-              Container(
-                height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(color: Colors.greenAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                child: const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 18),
-              )
-          ],
+
+        _buildInputSectionLabel("Create Password"),
+        _buildCustomFormInput(_passwordController, Icons.lock_rounded, "Create a strong password (min 6 chars)", false, isPasswordField: true, isFieldObscured: _isPasswordObscured,
+          suffix: IconButton(
+            icon: Icon(_isPasswordObscured ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white38, size: 16),
+            onPressed: () => setState(() => _isPasswordObscured = !_isPasswordObscured),
+          ),
         ),
         const SizedBox(height: 18),
-        
-        if (_isOtpVerified) ...[
-          _buildInputSectionLabel("Create Password"),
-          _buildCustomFormInput(_passwordController, Icons.lock_rounded, "Create a strong password", false, isPasswordField: true, isFieldObscured: _isPasswordObscured,
-            suffix: IconButton(
-              icon: Icon(_isPasswordObscured ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white38, size: 16),
-              onPressed: () => setState(() => _isPasswordObscured = !_isPasswordObscured),
-            )
+
+        _buildInputSectionLabel("Confirm Password"),
+        _buildCustomFormInput(_confirmPasswordController, Icons.lock_outline_rounded, "Confirm your password", false, isPasswordField: true, isFieldObscured: _isConfirmPasswordObscured,
+          suffix: IconButton(
+            icon: Icon(_isConfirmPasswordObscured ? Icons.visibility_off_rounded : Icons.visibility_rounded, color: Colors.white38, size: 16),
+            onPressed: () => setState(() => _isConfirmPasswordObscured = !_isConfirmPasswordObscured),
           ),
-          const SizedBox(height: 20),
-        ],
-        
+        ),
+        const SizedBox(height: 18),
+
         _buildDynamicFeedbackLabel(),
         const SizedBox(height: 12),
-        
-        _buildSubmitActionButton(
-          _isOtpVerified ? "Create Account →" : "Please Verify Email First", 
-          _isOtpVerified ? () => _handleAccountCommitment(provider) : null
-        ),
+
+        _buildSubmitActionButton("Create Account →", () => _handleDirectSignup(provider)),
         const SizedBox(height: 24),
-        
+
         Center(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -422,9 +303,11 @@ class _LoginScreenState extends State<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          width: 44, height: 44,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
-            color: const Color(0xFF0D0A21), borderRadius: BorderRadius.circular(8),
+            color: const Color(0xFF0D0A21),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFF8A56FA).withOpacity(0.3), width: 1.5),
           ),
           child: const Center(child: Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 24)),
@@ -449,16 +332,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildCustomFormInput(
-    TextEditingController controller, 
-    IconData leadingIcon, 
-    String hintPlaceholder, 
-    bool disableField, 
-    {required bool isPasswordField, bool isFieldObscured = false, Widget? suffix}
-  ) {
+    TextEditingController controller,
+    IconData leadingIcon,
+    String hintPlaceholder,
+    bool disableField, {
+    required bool isPasswordField,
+    bool isFieldObscured = false,
+    Widget? suffix,
+  }) {
     return Container(
       height: 46,
       decoration: BoxDecoration(
-        color: disableField ? const Color(0xFF141624) : const Color(0xFF05060E), 
+        color: disableField ? const Color(0xFF141624) : const Color(0xFF05060E),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.white.withOpacity(0.06), width: 1),
       ),
@@ -492,13 +377,16 @@ class _LoginScreenState extends State<LoginScreen> {
       height: 46,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(6),
-        gradient: isGreyed 
-            ? null 
+        gradient: isGreyed
+            ? null
             : const LinearGradient(colors: [Color(0xFF5A4AE3), Color(0xFF8A56FA)]),
         color: isGreyed ? Colors.grey.shade900 : null,
       ),
       child: ElevatedButton(
-        style: ElevatedButton.styleFrom(backgroundColor: Colors.transparent, shadowColor: Colors.transparent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
+        style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6))),
         onPressed: action,
         child: Text(text, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isGreyed ? Colors.white24 : Colors.white)),
       ),
@@ -511,13 +399,17 @@ class CyberPremiumBackgroundPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paintLine = Paint()..color = const Color(0xFF8A56FA).withOpacity(0.08)..strokeWidth = 0.8..style = PaintingStyle.stroke;
     final paintGlowNode = Paint()..color = const Color(0xFF8A56FA).withOpacity(0.4)..style = PaintingStyle.fill;
-    final rand = math.Random(42); 
+    final rand = math.Random(42);
 
     final pathMesh = Path();
     pathMesh.moveTo(0, size.height * 0.85);
     for (double i = 0; i <= size.width; i += 40) {
       double dy = size.height * 0.88 + 35 * math.sin((i / size.width) * 3 * math.pi);
-      if (i == 0) { pathMesh.moveTo(i, dy); } else { pathMesh.lineTo(i, dy); }
+      if (i == 0) {
+        pathMesh.moveTo(i, dy);
+      } else {
+        pathMesh.lineTo(i, dy);
+      }
     }
     canvas.drawPath(pathMesh, paintLine);
 
@@ -534,6 +426,7 @@ class CyberPremiumBackgroundPainter extends CustomPainter {
       canvas.drawCircle(Offset(px, py), 1.0 + rand.nextDouble() * 2.2, paintGlowNode);
     }
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
